@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # commands: link every bin/maus* into ~/.local/bin.
 
 chmod +x "$MAUSOS_PATH"/bin/* "$MAUSOS_PATH/lib/atspi.py"

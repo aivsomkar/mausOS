@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared helpers for every maus-* command. Sourced, never executed.
 #
 # Commands are symlinked into ~/.local/bin, so they resolve this file through

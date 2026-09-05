@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Helpers sourced by install.sh and every install/<step>.sh. No shebang, no set -e.
 
 C_INFO=$'\e[36m'; C_OK=$'\e[32m'; C_WARN=$'\e[33m'; C_ERR=$'\e[31m'; C_OFF=$'\e[0m'

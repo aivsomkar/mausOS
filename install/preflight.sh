@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # preflight: is this a machine MausOS can layer onto?
 
 [[ $EUID -ne 0 ]] || die "run the installer as your normal user, not root"

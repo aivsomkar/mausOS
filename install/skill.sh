@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # skill: put the MausOS skill where agents look for skills.
 #
 # The skill teaches an agent the control ladder and the maus commands. It is

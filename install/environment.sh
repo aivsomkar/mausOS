@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # environment: make every toolkit publish its accessibility tree (rung 3).
 #
 # GTK 3 needs the atk bridge module; GTK 4 speaks AT-SPI natively when the

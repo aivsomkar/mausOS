@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # engines: a local, tool-capable engine so MausOS works with no account.
 #
 # OpenCode (MIT) is the default engine: it has its own tool loop, speaks ACP

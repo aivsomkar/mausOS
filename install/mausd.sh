@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # mausd: build OpenMausBot and run its harness server as a user service.
 #
 #   MAUSOS_OPENMAUSBOT_REPO   git URL   (default: upstream milind-soni/OpenMausBot)
@@ -25,7 +26,7 @@ if [[ -f "$built_rev_file" && "$(cat "$built_rev_file")" == "$rev" && -f "$check
 else
   info "building OpenMausBot (this takes a few minutes the first time)"
   (
-    cd "$checkout"
+    cd "$checkout" || exit 1
     pnpm install --frozen-lockfile
     pnpm build
     pnpm build:server

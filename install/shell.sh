@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # shell: a desktop entry for the MausOS shell, and open it now if we can.
 
 appdir="$HOME/.local/share/applications"

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # packages: what the maus commands and mausd need.
 
 # Commands

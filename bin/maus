@@ -164,7 +164,7 @@ dispatch() {
   echo "maus: unknown command '$group $name'" >&2
   local f
   for f in "$MAUS_BIN_DIR"/maus-"$group"-*; do
-    [[ -f $f ]] && echo "  did you mean: maus $group ${f##*/maus-$group-}" >&2
+    [[ -f $f ]] && echo "  did you mean: maus $group ${f##*/maus-"$group"-}" >&2
   done
   exit 1
 }

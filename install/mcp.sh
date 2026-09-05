@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # mcp: register `maus mcp` with mausd so every bot gets the commands as tools.
 #
 # OpenMausBot reads custom stdio MCP servers from ~/.openmausbot/config.json

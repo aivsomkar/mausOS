@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # hyprland: add the MausOS layer to the user's Hyprland config.
 #
 # We never edit Omarchy's package-owned defaults. The user's
