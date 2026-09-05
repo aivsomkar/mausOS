@@ -1,0 +1,24 @@
+#!/bin/bash
+# maus:group=term
+# maus:summary=Read the last lines of a shared terminal session as text (no screenshot needed)
+# maus:args=<name> [--lines N]
+# maus:risk=safe
+# maus:rung=1
+# maus:examples=maus term read build|maus term read build --lines 200
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need tmux
+
+name=$1; shift
+lines=60
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --lines) lines=$2; shift 2 ;;
+    *) shift ;;
+  esac
+done
+session="maus-$name"
+tmux has-session -t "$session" 2>/dev/null || maus_die "no session $session (maus term open $name)"
+tmux capture-pane -p -J -t "$session" -S "-$lines" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'

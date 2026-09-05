@@ -1,0 +1,27 @@
+#!/bin/bash
+# maus:group=sys
+# maus:summary=Read or write the clipboard
+# maus:args=get | set <text>
+# maus:risk=ask
+# maus:rung=1
+# maus:examples=maus sys clipboard get|maus sys clipboard set "copied by maus"
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+
+case "$1" in
+  get)
+    maus_need wl-paste
+    maus_log "clipboard get"
+    wl-paste --no-newline 2>/dev/null || true
+    echo
+    ;;
+  set)
+    maus_need wl-copy
+    shift
+    maus_log "clipboard set ${#*} chars"
+    printf '%s' "$*" | wl-copy
+    ;;
+  *) maus_die "use: get | set <text>" ;;
+esac

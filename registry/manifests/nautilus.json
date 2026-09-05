@@ -1,0 +1,23 @@
+{
+  "id": "nautilus",
+  "name": "Files (Nautilus) and file managers",
+  "kind": "file-manager",
+  "match": { "class": ["org.gnome.Nautilus", "nautilus", "thunar", "Thunar", "org.kde.dolphin", "nemo"], "desktop": ["org.gnome.Nautilus.desktop", "thunar.desktop", "org.kde.dolphin.desktop"], "binary": ["nautilus", "thunar", "dolphin", "nemo"] },
+  "rungs": {
+    "1": [
+      { "channel": "dbus", "how": "org.freedesktop.FileManager1 /org/freedesktop/FileManager1: ShowItems([uris], startup_id) | ShowFolders | ShowItemProperties", "notes": "Every file manager implements it: reveal a file, open a folder, open properties." },
+      { "channel": "cli", "how": "gio open <path> | gio trash <path> | gio info | gio mount | gio list; xdg-open <path>", "notes": "The file operations themselves never need the file manager; the agent's own file tools plus gio cover everything, with the trash instead of rm." }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Nautilus (GTK4) exposes the file list as a table/grid with file names; Dolphin (Qt) likewise.", "notes": "Only needed to select things for the user to see." }
+    ]
+  },
+  "capabilities": [
+    { "name": "reveal", "rung": 1, "risk": "safe", "run": "busctl --user call org.freedesktop.FileManager1 /org/freedesktop/FileManager1 org.freedesktop.FileManager1 ShowItems ass 1 'file://{path}' ''" },
+    { "name": "open_folder", "rung": 1, "risk": "safe", "run": "gio open {dir}" },
+    { "name": "trash", "rung": 1, "risk": "ask", "run": "maus file trash {path}" },
+    { "name": "search", "rung": 1, "risk": "safe", "run": "maus file search {pattern} {dir}" }
+  ],
+  "quirks": ["Never delete with rm; maus file trash is reversible."],
+  "verified": "curated-2026-09"
+}

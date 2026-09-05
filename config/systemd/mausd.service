@@ -1,0 +1,16 @@
+[Unit]
+Description=MausOS agent daemon (OpenMausBot harness server)
+Documentation=https://github.com/aivsomkar/mausOS
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/maus-daemon-run
+Restart=on-failure
+RestartSec=2
+Environment=OMB_PORT=__OMB_PORT__
+# Loopback only. The server trusts anything on 127.0.0.1; never expose it.
+Environment=MAUSOS=1
+
+[Install]
+WantedBy=default.target

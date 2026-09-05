@@ -1,0 +1,26 @@
+{
+  "id": "hyprland",
+  "name": "Hyprland (windows, workspaces, input)",
+  "kind": "compositor",
+  "match": { "class": [], "desktop": [], "binary": ["hyprctl", "Hyprland"] },
+  "rungs": {
+    "1": [
+      { "channel": "socket", "how": "hyprctl -j clients|activewindow|workspaces|monitors|devices; hyprctl dispatch focuswindow address:<a> | movetoworkspace <ws> | togglefloating | fullscreen | exec <cmd> | killactive; hyprctl setprop address:<a> activebordercolor rgb(..); hyprctl keyword <option> <value>; event stream on $XDG_RUNTIME_DIR/hypr/$SIG/.socket2.sock", "notes": "Complete window management as JSON. The transport behind maus win *." },
+      { "channel": "protocol", "how": "Wayland: virtual-keyboard-unstable-v1 and wlr-virtual-pointer (wtype, ydotool), wlr-screencopy / hyprland-toplevel-export (grim, per-window capture), wlr-foreign-toplevel, wlr-layer-shell", "notes": "Input injection and capture are compositor-level; MausOS uses them at rung 4/5 only." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/hypr/hyprland.conf and files it sources (Omarchy: bindings.conf, monitors.conf, input.conf, looknfeel.conf; MausOS: mausos.conf). `hyprctl reload` applies; `hyprctl configerrors` validates.", "notes": "Window-rule syntax changed in 0.53; check `hyprctl version` before writing rules." }
+    ]
+  },
+  "capabilities": [
+    { "name": "list_windows", "rung": 1, "risk": "safe", "run": "maus win list" },
+    { "name": "focus", "rung": 1, "risk": "safe", "run": "maus win focus {query}" },
+    { "name": "lease", "rung": 1, "risk": "ask", "run": "maus win lease {query} --by {bot}" },
+    { "name": "move_to_workspace", "rung": 1, "risk": "safe", "run": "hyprctl dispatch movetoworkspacesilent {ws},address:{address}" },
+    { "name": "events", "rung": 1, "risk": "safe", "run": "maus win events" },
+    { "name": "type", "rung": 4, "risk": "ask", "run": "maus win input type {text}" },
+    { "name": "screenshot_window", "rung": 5, "risk": "vision", "run": "maus see shot --window" }
+  ],
+  "quirks": ["Super+Shift+Escape (bound in mausos.conf) runs maus agent stop --all regardless of the shell's state."],
+  "verified": "curated-2026-09"
+}

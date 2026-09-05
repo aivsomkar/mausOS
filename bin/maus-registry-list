@@ -1,0 +1,19 @@
+#!/bin/bash
+# maus:group=registry
+# maus:summary=List capability manifests: which apps MausOS knows how to drive, and their best rung
+# maus:args=[--json]
+# maus:risk=safe
+# maus:rung=1
+# maus:json=true
+# maus:examples=maus registry list|maus registry list --json
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need jq
+
+if maus_want_json "$@"; then
+  jq -s 'map({id, name, kind, bestRung: (.rungs | keys | map(tonumber) | min), match, verified})' "$MAUS_REGISTRY_DIR"/*.json
+else
+  jq -r '"\(.id)\t\(.rungs | keys | map(tonumber) | min)\t\(.kind)\t\(.name)"' "$MAUS_REGISTRY_DIR"/*.json \
+    | sort | awk -F'\t' '{printf "%-18s rung %s  %-9s %s\n", $1, $2, $3, $4}'
+fi

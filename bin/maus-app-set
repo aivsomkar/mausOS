@@ -1,0 +1,14 @@
+#!/bin/bash
+# maus:group=app
+# maus:summary=Set a text field or slider by name or id through the accessibility tree
+# maus:args=<app|pid> <name|id> <value>
+# maus:risk=ask
+# maus:rung=3
+# maus:json=true
+# maus:examples=maus app set firefox "Search or enter address" "hyprland window rules"
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 3 ]] || { maus_usage; exit 1; }
+maus_log "set $1 '$2'"
+maus_atspi set "$@"

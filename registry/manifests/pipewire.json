@@ -1,0 +1,23 @@
+{
+  "id": "pipewire",
+  "name": "PipeWire / WirePlumber (audio)",
+  "kind": "system-service",
+  "match": { "class": ["org.pulseaudio.pavucontrol", "pavucontrol"], "desktop": ["org.pulseaudio.pavucontrol.desktop"], "binary": ["wpctl", "pw-cli", "pactl"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "wpctl status | get-volume @DEFAULT_AUDIO_SINK@ | set-volume … 40% | set-mute … toggle | set-default <id> | inspect <id>; pactl list sinks short; pw-cli ls Node", "notes": "Volume, mute, default device, per-app streams." },
+      { "channel": "api", "how": "PipeWire native protocol (libpipewire) / PulseAudio compatibility socket", "notes": "Only for streaming audio in or out (Phase 2 voice)." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/wireplumber/wireplumber.conf.d/*.conf, ~/.config/pipewire/", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "volume", "rung": 1, "risk": "safe", "run": "maus hw volume set {percent}" },
+    { "name": "mute", "rung": 1, "risk": "safe", "run": "maus hw volume mute" },
+    { "name": "list_devices", "rung": 1, "risk": "safe", "run": "wpctl status" },
+    { "name": "set_default_output", "rung": 1, "risk": "ask", "run": "wpctl set-default {id}" }
+  ],
+  "quirks": [],
+  "verified": "curated-2026-09"
+}

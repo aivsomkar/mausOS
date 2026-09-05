@@ -1,0 +1,24 @@
+MausOS
+Copyright (c) 2026 Omkar (aivsomkar) and MausOS contributors. MIT License.
+
+This project builds on and installs the following software. It does not
+redistribute their source in this repository; the installer fetches them.
+
+Omarchy — https://github.com/omacom/omarchy
+  Copyright (c) David Heinemeier Hansson. MIT License.
+  MausOS is designed as a layer on an Omarchy installation and copies its
+  conventions: the self-describing command family, config layering
+  (package-owned files are never edited; user overrides live in ~/.config),
+  lazy-installed agent CLIs, and the shipped agent skill.
+
+OpenMausBot — https://github.com/milind-soni/OpenMausBot
+  Copyright (c) Milind Soni. Apache License 2.0.
+  MausOS runs the OpenMausBot harness server as the `mausd` user service and
+  uses its web interface as the MausOS shell in Phase 0.
+
+Hyprland — https://hyprland.org — BSD 3-Clause.
+OpenCode — https://opencode.ai — MIT.
+Ollama — https://ollama.com — MIT.
+
+Proprietary agent CLIs (Claude Code, Codex, Gemini CLI and others) are not
+part of MausOS and are installed by the user under their own terms.

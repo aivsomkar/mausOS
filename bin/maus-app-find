@@ -1,0 +1,13 @@
+#!/bin/bash
+# maus:group=app
+# maus:summary=Find widgets in an app by name (and optional role); returns ids usable by press/set/focus
+# maus:args=<app|pid> <query> [--role ROLE] [--all]
+# maus:risk=safe
+# maus:rung=3
+# maus:json=true
+# maus:examples=maus app find firefox "Search"|maus app find libreoffice Save --role "push button"
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 2 ]] || { maus_usage; exit 1; }
+maus_atspi find "$@"

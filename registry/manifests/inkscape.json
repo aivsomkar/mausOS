@@ -1,0 +1,25 @@
+{
+  "id": "inkscape",
+  "name": "Inkscape",
+  "kind": "vector-editor",
+  "match": { "class": ["inkscape", "org.inkscape.Inkscape"], "desktop": ["org.inkscape.Inkscape.desktop", "inkscape.desktop"], "binary": ["inkscape"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "inkscape --export-type=png|pdf|svg --export-filename=<out> <in>; --export-id=<id> --export-id-only; --actions='select-all;object-to-path;export-do' (inkscape --action-list shows every action); --shell for a REPL", "notes": "Nearly every menu command is an action callable from the CLI." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/inkscape/preferences.xml", "notes": "" }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "GTK4 tree for dialogs and toolbars; canvas is a drawing area.", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "export", "rung": 1, "risk": "safe", "run": "inkscape --export-type={type} --export-filename={out} {in}" },
+    { "name": "run_actions", "rung": 1, "risk": "ask", "run": "inkscape --actions='{actions}' {file}" },
+    { "name": "list_actions", "rung": 1, "risk": "safe", "run": "inkscape --action-list" },
+    { "name": "open", "rung": 1, "risk": "safe", "run": "inkscape {file}" }
+  ],
+  "quirks": ["SVG is text: for structural edits, editing the file directly is often simplest."],
+  "verified": "curated-2026-09"
+}

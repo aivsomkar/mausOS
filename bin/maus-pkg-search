@@ -1,0 +1,43 @@
+#!/bin/bash
+# maus:group=pkg
+# maus:summary=Search packages (official repos, AUR via yay if present, Flathub via flatpak if present)
+# maus:args=<query> [--json]
+# maus:risk=safe
+# maus:rung=1
+# maus:json=true
+# maus:examples=maus pkg search blender|maus pkg search obsidian --json
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+
+mapfile -t rest < <(maus_strip_json "$@")
+q=${rest[0]}
+want_json=0; maus_want_json "$@" && want_json=1
+
+results=()
+if command -v yay >/dev/null 2>&1; then
+  while IFS= read -r line; do results+=("$line"); done < <(yay -Ss --color never "$q" 2>/dev/null | awk '/^[a-z]/{split($1,a,"/"); printf "%s\t%s\t%s\n", a[1], a[2], $2}' | head -40)
+else
+  while IFS= read -r line; do results+=("$line"); done < <(pacman -Ss "$q" 2>/dev/null | awk '/^[a-z]/{split($1,a,"/"); printf "%s\t%s\t%s\n", a[1], a[2], $2}' | head -40)
+fi
+if command -v flatpak >/dev/null 2>&1; then
+  while IFS= read -r line; do results+=("$line"); done < <(flatpak search --columns=application,version "$q" 2>/dev/null | awk -F'\t' 'NR>0 && $1 != "" {printf "flathub\t%s\t%s\n", $1, $2}' | head -20)
+fi
+
+if [[ $want_json -eq 1 ]]; then
+  printf '['
+  first=1
+  for r in "${results[@]}"; do
+    IFS=$'\t' read -r src name ver <<< "$r"
+    [[ $first -eq 1 ]] || printf ','
+    first=0
+    printf '{"source":"%s","name":"%s","version":"%s"}' "$(maus_json_escape "$src")" "$(maus_json_escape "$name")" "$(maus_json_escape "$ver")"
+  done
+  printf ']\n'
+else
+  for r in "${results[@]}"; do
+    IFS=$'\t' read -r src name ver <<< "$r"
+    printf '%-8s %-40s %s\n' "$src" "$name" "$ver"
+  done
+fi

@@ -1,0 +1,33 @@
+{
+  "id": "firefox",
+  "name": "Firefox",
+  "kind": "browser",
+  "match": { "class": ["firefox", "firefox-esr", "Firefox"], "desktop": ["firefox.desktop"], "binary": ["firefox"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "firefox --new-tab <url> | --new-window <url> | --private-window <url> | --search <terms>", "notes": "Targets the running instance. Returns immediately." },
+      { "channel": "protocol", "how": "WebDriver BiDi over --remote-debugging-port=<port> (or Marionette via --marionette)", "notes": "Navigate, read the DOM, fill forms, run scripts, screenshots of the page only. The Phase 1 executor uses this; today use rung 3." },
+      { "channel": "data", "how": "~/.mozilla/firefox/<profile>/places.sqlite (history, bookmarks), sessionstore-backups/recovery.jsonlz4 (open tabs)", "notes": "Copy the file before reading; it is locked while Firefox runs. Observation-layer source." }
+    ],
+    "2": [
+      { "channel": "config", "how": "user.js in the profile; /usr/lib/firefox/distribution/policies.json for enterprise policies", "notes": "Most prefs need a restart." }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Full tree: toolbar, tabs, sidebar and page content (document web). Needs GNOME_ACCESSIBILITY=1, which MausOS sets.", "notes": "Address bar is named 'Search or enter address'. Page links and buttons appear under the 'document web' node with their visible text as name." }
+    ]
+  },
+  "capabilities": [
+    { "name": "open_url", "rung": 1, "risk": "safe", "run": "firefox --new-tab {url}" },
+    { "name": "search", "rung": 1, "risk": "safe", "run": "firefox --search {terms}" },
+    { "name": "read_page_text", "rung": 3, "risk": "safe", "run": "maus app text firefox" },
+    { "name": "click_link", "rung": 3, "risk": "ask", "run": "maus app press firefox {link_text}" },
+    { "name": "fill_field", "rung": 3, "risk": "ask", "run": "maus app set firefox {field_name} {value}" },
+    { "name": "navigate_via_bar", "rung": 3, "risk": "safe", "run": "maus app set firefox 'Search or enter address' {url} && maus win input key Return" }
+  ],
+  "quirks": [
+    "Google account logins and some CAPTCHAs must be handed to the user: release the lease and say so.",
+    "With many tabs the tree is large; use --depth 8 or maus app find instead of a full tree.",
+    "Private windows expose the same tree."
+  ],
+  "verified": "curated-2026-09"
+}

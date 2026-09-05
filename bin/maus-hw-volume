@@ -1,0 +1,22 @@
+#!/bin/bash
+# maus:group=hw
+# maus:summary=Get or set the output volume (PipeWire)
+# maus:args=[get] | set <0-150> | up | down | mute | unmute
+# maus:risk=safe
+# maus:rung=1
+# maus:examples=maus hw volume|maus hw volume set 40|maus hw volume mute
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need wpctl
+
+sink=@DEFAULT_AUDIO_SINK@
+case "${1:-get}" in
+  get) wpctl get-volume $sink ;;
+  set) [[ -n ${2:-} ]] || maus_die "set needs a number"; maus_log "volume $2"; wpctl set-volume -l 1.5 $sink "$2%"; wpctl get-volume $sink ;;
+  up) wpctl set-volume -l 1.5 $sink 5%+; wpctl get-volume $sink ;;
+  down) wpctl set-volume $sink 5%-; wpctl get-volume $sink ;;
+  mute) maus_log "mute"; wpctl set-mute $sink 1; wpctl get-volume $sink ;;
+  unmute) wpctl set-mute $sink 0; wpctl get-volume $sink ;;
+  *) maus_die "use: get | set N | up | down | mute | unmute" ;;
+esac

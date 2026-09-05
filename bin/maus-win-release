@@ -1,0 +1,36 @@
+#!/bin/bash
+# maus:group=win
+# maus:summary=Release a window lease (or every lease with --all) and restore its border
+# maus:args=<address> | --all
+# maus:risk=safe
+# maus:rung=4
+# maus:examples=maus win release --all|maus win release 0x55d0c3a1b2c0
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+
+leases="$MAUS_RUNTIME_DIR/leases"
+[[ -f $leases ]] || exit 0
+
+release_one() {
+  local addr=$1
+  if command -v hyprctl >/dev/null 2>&1 && [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+    hyprctl setprop "address:$addr" activebordercolor -1 >/dev/null 2>&1 || true
+    hyprctl setprop "address:$addr" inactivebordercolor -1 >/dev/null 2>&1 || true
+  fi
+  maus_log "release $addr"
+}
+
+if [[ $1 == "--all" ]]; then
+  while IFS=$'\t' read -r addr _; do
+    [[ -n $addr ]] && release_one "$addr"
+  done < "$leases"
+  : > "$leases"
+  echo "released all"
+else
+  release_one "$1"
+  grep -v "^$1"$'\t' "$leases" > "$leases.tmp" || true
+  mv "$leases.tmp" "$leases"
+  echo "released $1"
+fi

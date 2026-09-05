@@ -1,0 +1,25 @@
+{
+  "id": "alacritty",
+  "name": "Alacritty",
+  "kind": "terminal",
+  "match": { "class": ["Alacritty", "alacritty", "mausos-term"], "desktop": ["Alacritty.desktop"], "binary": ["alacritty"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "alacritty -e <cmd> | --working-directory <dir> | --class <class> | -T <title> | msg create-window", "notes": "Omarchy's default terminal. Content is best reached through tmux (maus term *), not the window." },
+      { "channel": "socket", "how": "alacritty msg config <key>=<value> (live config changes over its IPC socket)", "notes": "Font size, colors, opacity at runtime." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/alacritty/alacritty.toml (live reload); Omarchy themes write ~/.config/alacritty/theme.toml", "notes": "" }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Minimal tree (a terminal node); text is not exposed. Use tmux.", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "open_shared_terminal", "rung": 1, "risk": "safe", "run": "maus term open {name} --cwd {dir}" },
+    { "name": "run_visible", "rung": 1, "risk": "ask", "run": "maus term send {name} {command}" },
+    { "name": "read_output", "rung": 1, "risk": "safe", "run": "maus term read {name}" }
+  ],
+  "quirks": ["Read terminal content through tmux capture-pane, never through a screenshot."],
+  "verified": "curated-2026-09"
+}

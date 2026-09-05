@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install shellcheck and jq
+        run: sudo apt-get update && sudo apt-get install -y shellcheck jq
+      - name: Bash syntax
+        run: bash -n bin/* install/*.sh lib/*.sh install.sh boot.sh
+      - name: Shellcheck
+        run: shellcheck -S warning bin/* install/*.sh lib/*.sh install.sh boot.sh
+      - name: Python syntax
+        run: python3 -m py_compile lib/atspi.py
+      - name: Registry manifests are valid JSON
+        run: for f in registry/manifests/*.json; do jq -e . "$f" > /dev/null || exit 1; done
+      - name: Command metadata is complete
+        run: |
+          set -e
+          for f in bin/maus-*; do
+            for key in group summary risk rung; do
+              grep -q "^# maus:$key=" "$f" || { echo "$f is missing maus:$key"; exit 1; }
+            done
+          done
+      - name: Node tests
+        run: npm test
+      - name: maus catalogue renders
+        run: |
+          chmod +x bin/* lib/atspi.py
+          ./bin/maus list --json | jq -e 'length > 20' > /dev/null
+          ./bin/maus help > /dev/null

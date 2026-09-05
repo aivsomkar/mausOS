@@ -1,0 +1,23 @@
+{
+  "id": "neovim",
+  "name": "Neovim",
+  "kind": "editor",
+  "match": { "class": ["nvim", "neovide"], "desktop": ["nvim.desktop", "neovide.desktop"], "binary": ["nvim", "neovide"] },
+  "rungs": {
+    "1": [
+      { "channel": "socket", "how": "nvim --listen /run/user/$UID/nvim-<name>.sock, then nvim --server <sock> --remote <file> | --remote-send <keys> | --remote-expr <expr>; full msgpack-RPC API (nvim_buf_get_lines, nvim_command…) over the same socket", "notes": "Everything the editor can do, typed. Omarchy's LazyVim setup works unchanged." },
+      { "channel": "cli", "how": "nvim +<line> <file> | -c <cmd> | --headless -c <cmd> -c q (batch edits with no UI)", "notes": "" }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/nvim/ (init.lua, lua/plugins/*.lua); LazyVim options in lua/config/options.lua", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "open_file", "rung": 1, "risk": "safe", "run": "nvim --server {sock} --remote {file}" },
+    { "name": "run_command", "rung": 1, "risk": "ask", "run": "nvim --server {sock} --remote-send '<Esc>:{command}<CR>'" },
+    { "name": "read_buffer", "rung": 1, "risk": "safe", "run": "nvim --server {sock} --remote-expr 'join(getline(1,\"$\"),\"\\n\")'" },
+    { "name": "batch_edit", "rung": 1, "risk": "ask", "run": "nvim --headless -c '{command}' -c 'wq' {file}" }
+  ],
+  "quirks": ["Inside a maus term session, nvim's screen is also readable as text via tmux; prefer the socket for edits."],
+  "verified": "curated-2026-09"
+}

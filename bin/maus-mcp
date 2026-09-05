@@ -1,0 +1,14 @@
+#!/bin/bash
+# maus:group=core
+# maus:summary=Serve every maus command as an MCP tool over stdio (what mausd mounts for each bot)
+# maus:args=
+# maus:risk=safe
+# maus:rung=1
+# maus:hidden=true
+# maus:examples=maus mcp
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need node
+export MAUS_BIN_DIR
+exec node "$MAUS_DIR/mcp/server.mjs"

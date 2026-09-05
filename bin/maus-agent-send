@@ -1,0 +1,24 @@
+#!/bin/bash
+# maus:group=agent
+# maus:summary=Send a message to a bot by name or id (starts a turn in the shell)
+# maus:args=<bot> <text…>
+# maus:risk=ask
+# maus:rung=1
+# maus:examples=maus agent send maus "clean up my downloads"
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 2 ]] || { maus_usage; exit 1; }
+maus_need jq
+
+bot=$1; shift
+text="$*"
+bots=$(maus_api GET /api/bots) || maus_die "mausd is not answering on $MAUSD_URL"
+id=$(echo "$bots" | jq -r --arg b "$bot" '(if type == "object" and has("bots") then .bots else . end)
+  | (map(select(.id == $b)) + map(select(((.name // .displayName // "") | ascii_downcase) == ($b | ascii_downcase))) + map(select(((.name // .displayName // "") | ascii_downcase) | contains($b | ascii_downcase))))
+  | .[0].id // empty')
+[[ -n $id ]] || maus_die "no bot matches '$bot' (maus agent list)"
+
+body=$(jq -n --arg t "$text" '{text: $t}')
+maus_log "send $id: $text"
+maus_api POST "/api/bots/$id/messages" "$body" | jq -c '{threadId, queued, messageId: .message.id}' 2>/dev/null || echo "sent"

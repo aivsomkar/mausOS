@@ -1,0 +1,50 @@
+#!/bin/bash
+# maus:group=term
+# maus:summary=Wait until a shared terminal goes quiet (or a pattern appears), then print its tail
+# maus:args=<name> [--until REGEX] [--timeout SECONDS] [--settle SECONDS]
+# maus:risk=safe
+# maus:rung=1
+# maus:examples=maus term wait build|maus term wait build --until "passed|failed" --timeout 600
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need tmux
+
+name=$1; shift
+until_re=""
+timeout=300
+settle=2
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --until) until_re=$2; shift 2 ;;
+    --timeout) timeout=$2; shift 2 ;;
+    --settle) settle=$2; shift 2 ;;
+    *) shift ;;
+  esac
+done
+session="maus-$name"
+tmux has-session -t "$session" 2>/dev/null || maus_die "no session $session"
+
+snap() { tmux capture-pane -p -J -t "$session" -S -200; }
+
+deadline=$((SECONDS + timeout))
+last=$(snap)
+quiet_since=$SECONDS
+while (( SECONDS < deadline )); do
+  sleep 0.5
+  cur=$(snap)
+  if [[ -n $until_re ]] && grep -Eq -- "$until_re" <<< "$cur"; then
+    echo "$cur" | tail -n 40
+    exit 0
+  fi
+  if [[ $cur != "$last" ]]; then
+    last=$cur
+    quiet_since=$SECONDS
+  elif (( SECONDS - quiet_since >= settle )) && [[ -z $until_re ]]; then
+    echo "$cur" | tail -n 40
+    exit 0
+  fi
+done
+echo "$last" | tail -n 40
+maus_die "timed out after ${timeout}s"

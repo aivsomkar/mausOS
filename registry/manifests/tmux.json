@@ -1,0 +1,23 @@
+{
+  "id": "tmux",
+  "name": "tmux",
+  "kind": "terminal-multiplexer",
+  "match": { "class": [], "desktop": [], "binary": ["tmux"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "tmux new-session -d -s <name> | send-keys -t <name> -l <text> | send-keys Enter | capture-pane -p -t <name> -S -N | list-sessions | kill-session", "notes": "The transport behind maus term *. Text in, text out, no vision." },
+      { "channel": "protocol", "how": "tmux -C (control mode): a line protocol with %output notifications per pane", "notes": "Phase 1 observation source: every command and its output, live." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/tmux/tmux.conf", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "open", "rung": 1, "risk": "safe", "run": "maus term open {name}" },
+    { "name": "send", "rung": 1, "risk": "ask", "run": "maus term send {name} {command}" },
+    { "name": "read", "rung": 1, "risk": "safe", "run": "maus term read {name}" },
+    { "name": "wait", "rung": 1, "risk": "safe", "run": "maus term wait {name} --until {regex}" }
+  ],
+  "quirks": ["Sessions created by MausOS are named maus-<name> so the user can attach to them in any terminal."],
+  "verified": "curated-2026-09"
+}

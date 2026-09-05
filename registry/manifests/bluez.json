@@ -1,0 +1,20 @@
+{
+  "id": "bluez",
+  "name": "Bluetooth (BlueZ)",
+  "kind": "system-service",
+  "match": { "class": ["blueman-manager", ".blueman-manager-wrapped"], "desktop": ["blueman-manager.desktop"], "binary": ["bluetoothctl", "blueman-manager"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "bluetoothctl power on | scan on | devices | pair <mac> | trust <mac> | connect <mac> | disconnect <mac> | info <mac>; non-interactive: bluetoothctl -- connect <mac>", "notes": "Pairing needs a PIN confirmation for some devices: surface it to the user." },
+      { "channel": "dbus", "how": "org.bluez on the system bus: /org/bluez/hci0 Adapter1 (StartDiscovery), Device1 objects (Connect, Pair, Trusted), PropertiesChanged", "notes": "Observation source for device connect/disconnect." }
+    ]
+  },
+  "capabilities": [
+    { "name": "list", "rung": 1, "risk": "safe", "run": "bluetoothctl devices" },
+    { "name": "connect", "rung": 1, "risk": "ask", "run": "bluetoothctl -- connect {mac}" },
+    { "name": "pair", "rung": 1, "risk": "ask", "run": "bluetoothctl -- pair {mac}" },
+    { "name": "power", "rung": 1, "risk": "ask", "run": "bluetoothctl power {on|off}" }
+  ],
+  "quirks": ["Some headsets need `trust` before `connect` to auto-reconnect."],
+  "verified": "curated-2026-09"
+}

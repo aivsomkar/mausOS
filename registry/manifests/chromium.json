@@ -1,0 +1,29 @@
+{
+  "id": "chromium",
+  "name": "Chromium / Chrome",
+  "kind": "browser",
+  "match": { "class": ["chromium", "Chromium", "google-chrome", "Google-chrome", "brave-browser"], "desktop": ["chromium.desktop", "google-chrome.desktop"], "binary": ["chromium", "google-chrome-stable", "brave"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "chromium <url> | --app=<url> | --new-window <url> | --incognito", "notes": "Targets the running instance of the same profile." },
+      { "channel": "protocol", "how": "Chrome DevTools Protocol at --remote-debugging-port=<port> (ws endpoint from http://127.0.0.1:<port>/json)", "notes": "Everything: navigate, DOM, network, input, accessibility snapshot. OpenMausBot's embedded browser already drives CDP; Phase 1 wires it to system Chromium." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/chromium-flags.conf (Arch reads it at launch); managed policies in /etc/chromium/policies/managed/*.json", "notes": "MausOS adds --force-renderer-accessibility there." }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Tree present only with --force-renderer-accessibility (set by MausOS) or when the a11y bus reports IsEnabled. Page content under 'document web'.", "notes": "Without the flag the tree is empty: check maus doctor." }
+    ]
+  },
+  "capabilities": [
+    { "name": "open_url", "rung": 1, "risk": "safe", "run": "chromium {url}" },
+    { "name": "read_page_text", "rung": 3, "risk": "safe", "run": "maus app text chromium" },
+    { "name": "click", "rung": 3, "risk": "ask", "run": "maus app press chromium {name}" },
+    { "name": "fill_field", "rung": 3, "risk": "ask", "run": "maus app set chromium {field_name} {value}" }
+  ],
+  "quirks": [
+    "Google OAuth blocks embedded/app-mode windows; use a normal window for sign-in.",
+    "The MausOS shell itself is a Chromium app window (class mausos-shell); exclude it when targeting 'chromium'."
+  ],
+  "verified": "curated-2026-09"
+}

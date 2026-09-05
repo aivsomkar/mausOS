@@ -1,0 +1,25 @@
+{
+  "id": "systemd",
+  "name": "systemd (services, sessions, power, logs)",
+  "kind": "system-service",
+  "match": { "class": [], "desktop": [], "binary": ["systemctl", "journalctl", "loginctl", "busctl"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "systemctl [--user] status|start|stop|restart|enable|list-units --failed; journalctl [--user] -u <unit> -n 100 --since '1 hour ago' -o json; loginctl lock-session; systemctl suspend|reboot|poweroff", "notes": "User units (mausd, ollama for the user…) need no root; system units do." },
+      { "channel": "dbus", "how": "org.freedesktop.systemd1 (Manager: ListUnits, StartUnit…), org.freedesktop.login1 (Suspend, LockSession, PrepareForSleep signal), org.freedesktop.UPower (battery)", "notes": "Observation sources: sleep/wake, battery, failed units." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/systemd/user/*.service for user units; /etc/systemd/system for system units (root)", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "failed_units", "rung": 1, "risk": "safe", "run": "systemctl --failed --no-pager; systemctl --user --failed --no-pager" },
+    { "name": "logs", "rung": 1, "risk": "safe", "run": "journalctl -u {unit} -n 100 --no-pager" },
+    { "name": "restart_user_unit", "rung": 1, "risk": "ask", "run": "systemctl --user restart {unit}" },
+    { "name": "restart_system_unit", "rung": 1, "risk": "privileged", "run": "sudo systemctl restart {unit}" },
+    { "name": "suspend", "rung": 1, "risk": "ask", "run": "systemctl suspend" },
+    { "name": "lock", "rung": 1, "risk": "safe", "run": "loginctl lock-session" }
+  ],
+  "quirks": ["Omarchy's crash notifications come from systemd-coredump; `coredumpctl list` and `coredumpctl info <pid>` read them."],
+  "verified": "curated-2026-09"
+}

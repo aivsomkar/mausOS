@@ -1,0 +1,49 @@
+#!/bin/bash
+# maus:group=see
+# maus:summary=Take a screenshot (screen, focused window, or region). Rung 5: use only to confirm or when no tree exists.
+# maus:args=[output.png] [--window] [--region] [--clipboard]
+# maus:risk=vision
+# maus:rung=5
+# maus:examples=maus see shot|maus see shot --window|maus see shot /tmp/check.png --region
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need grim jq
+
+out=""
+mode=screen
+clip=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --window) mode=window; shift ;;
+    --region) mode=region; shift ;;
+    --clipboard) clip=1; shift ;;
+    *) out=$1; shift ;;
+  esac
+done
+if [[ -z $out ]]; then
+  mkdir -p "$MAUS_STATE_DIR/shots"
+  out="$MAUS_STATE_DIR/shots/$(date +%Y%m%d-%H%M%S).png"
+fi
+
+geom=""
+case "$mode" in
+  window)
+    geom=$(maus_hypr activewindow -j | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')
+    ;;
+  region)
+    maus_need slurp
+    geom=$(slurp) || maus_die "region selection cancelled"
+    ;;
+esac
+
+if [[ -n $geom ]]; then
+  grim -g "$geom" "$out"
+else
+  grim "$out"
+fi
+maus_log "shot $mode -> $out (vision)"
+if [[ $clip -eq 1 ]] && command -v wl-copy >/dev/null 2>&1; then
+  wl-copy < "$out"
+fi
+echo "$out"

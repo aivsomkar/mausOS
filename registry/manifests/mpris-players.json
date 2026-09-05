@@ -1,0 +1,24 @@
+{
+  "id": "mpris-players",
+  "name": "Media players (Spotify, browsers, VLC, mpv…)",
+  "kind": "media-player",
+  "match": { "class": ["spotify", "Spotify", "vlc", "org.gnome.Music", "io.bassi.Amberol"], "desktop": ["spotify.desktop", "vlc.desktop"], "binary": ["spotify", "vlc", "playerctl"] },
+  "rungs": {
+    "1": [
+      { "channel": "dbus", "how": "org.mpris.MediaPlayer2.* on the session bus: playerctl -l | play-pause | next | previous | position | metadata | volume; busctl --user call org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player Pause", "notes": "Every desktop player and every browser tab playing media implements MPRIS. No UI needed for playback, and 'what is playing' is a property read." },
+      { "channel": "cli", "how": "spotify --uri=spotify:track:<id> (Spotify); vlc <file> --intf dummy", "notes": "" }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Spotify (Electron) needs --force-renderer-accessibility; search and playlists are then reachable by name. VLC (Qt) has a full tree.", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "now_playing", "rung": 1, "risk": "safe", "run": "playerctl metadata --format '{{playerName}}: {{artist}} - {{title}} ({{status}})'" },
+    { "name": "play_pause", "rung": 1, "risk": "safe", "run": "playerctl -p {player} play-pause" },
+    { "name": "next", "rung": 1, "risk": "safe", "run": "playerctl -p {player} next" },
+    { "name": "set_volume", "rung": 1, "risk": "safe", "run": "playerctl -p {player} volume {0-1}" },
+    { "name": "spotify_open", "rung": 1, "risk": "safe", "run": "spotify --uri={uri}" }
+  ],
+  "quirks": ["playerctl is a small extra package (pacman -S playerctl); busctl works without it."],
+  "verified": "curated-2026-09"
+}

@@ -1,0 +1,36 @@
+#!/bin/bash
+# maus:group=file
+# maus:summary=Checkpoint the home directory (read-only Btrfs snapshot) before a risky action; list with --list
+# maus:args=[label] | --list
+# maus:risk=privileged
+# maus:rung=1
+# maus:requires-sudo=true
+# maus:examples=maus file snapshot "before downloads cleanup"|maus file snapshot --list
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+
+snapdir="${MAUSOS_SNAPSHOT_DIR:-$HOME/.snapshots/mausos}"
+
+if [[ "${1:-}" == "--list" ]]; then
+  [[ -d $snapdir ]] || { echo "no snapshots yet"; exit 0; }
+  for s in "$snapdir"/*/; do
+    [[ -d $s ]] || continue
+    label=$(cat "$s.label" 2>/dev/null || cat "${s%/}.label" 2>/dev/null || true)
+    printf '%s\t%s\n' "$(basename "$s")" "$label"
+  done
+  exit 0
+fi
+
+fstype=$(findmnt -no FSTYPE --target "$HOME" 2>/dev/null || echo unknown)
+[[ $fstype == btrfs ]] || maus_die "home is on $fstype; Btrfs checkpoints need a Btrfs home (Omarchy installs use Btrfs)"
+maus_need btrfs
+sudo btrfs subvolume show "$HOME" >/dev/null 2>&1 || maus_die "$HOME is not a Btrfs subvolume; cannot snapshot it alone (Phase 1 adds root snapshots via Omarchy's snapper setup)"
+
+label="${1:-checkpoint}"
+mkdir -p "$snapdir"
+name=$(date +%Y%m%d-%H%M%S)
+sudo btrfs subvolume snapshot -r "$HOME" "$snapdir/$name" >/dev/null
+printf '%s\n' "$label" > "$snapdir/$name.label"
+maus_log "snapshot $snapdir/$name ($label)"
+echo "$snapdir/$name"

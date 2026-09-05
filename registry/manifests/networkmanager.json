@@ -1,0 +1,24 @@
+{
+  "id": "networkmanager",
+  "name": "NetworkManager (Wi‑Fi, Ethernet, VPN)",
+  "kind": "system-service",
+  "match": { "class": ["nm-connection-editor"], "desktop": ["nm-connection-editor.desktop"], "binary": ["nmcli", "nmtui"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "nmcli -t dev status | dev wifi list | dev wifi connect <ssid> password <pw> | con up|down id <name> | con add type vpn … | radio wifi on|off | general status", "notes": "Everything the settings panel does. -t gives machine-readable output." },
+      { "channel": "dbus", "how": "org.freedesktop.NetworkManager on the system bus (/org/freedesktop/NetworkManager): Devices, ActiveConnections, PropertiesChanged signals", "notes": "Phase 1 observation source (connectivity changes)." }
+    ],
+    "2": [
+      { "channel": "config", "how": "/etc/NetworkManager/system-connections/*.nmconnection (root), ~/.config for none", "notes": "Prefer nmcli; it writes these safely." }
+    ]
+  },
+  "capabilities": [
+    { "name": "status", "rung": 1, "risk": "safe", "run": "maus net status" },
+    { "name": "scan", "rung": 1, "risk": "safe", "run": "maus net status --scan" },
+    { "name": "connect_wifi", "rung": 1, "risk": "ask", "run": "maus net connect {ssid} {password}" },
+    { "name": "vpn_up", "rung": 1, "risk": "ask", "run": "nmcli con up id {vpn_name}" },
+    { "name": "wifi_off", "rung": 1, "risk": "ask", "run": "nmcli radio wifi off" }
+  ],
+  "quirks": ["Passwords for saved networks live in NetworkManager's keyring-backed store; nmcli con up reuses them without asking."],
+  "verified": "curated-2026-09"
+}

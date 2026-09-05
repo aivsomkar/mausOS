@@ -1,0 +1,13 @@
+#!/bin/bash
+# maus:group=app
+# maus:summary=Dump an app's accessibility tree as JSON (roles, names, states, actions, bounds). No screenshot.
+# maus:args=<app|pid> [--depth N] [--all] [--max N]
+# maus:risk=safe
+# maus:rung=3
+# maus:json=true
+# maus:examples=maus app tree firefox --depth 6|maus app tree 41233 --all
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_atspi tree "$@"

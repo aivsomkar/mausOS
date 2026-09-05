@@ -1,0 +1,25 @@
+#!/bin/bash
+# maus:group=registry
+# maus:summary=Find the manifest for a window class, desktop id or binary (what can I do with this app?)
+# maus:args=<class|desktop-id|binary>
+# maus:risk=safe
+# maus:rung=1
+# maus:json=true
+# maus:examples=maus registry for firefox|maus registry for org.blender.Blender|maus registry for code
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need jq
+
+q=$1
+hit=$(jq -s --arg q "$q" '
+  map(select(
+    (.id == $q)
+    or ((.match.class // []) | map(ascii_downcase) | index($q | ascii_downcase) != null)
+    or ((.match.desktop // []) | index($q) != null)
+    or ((.match.binary // []) | index($q) != null)
+    or ((.match.class // []) | map(ascii_downcase) | any(. as $c | ($q | ascii_downcase) | contains($c)))
+  )) | .[0] // empty' "$MAUS_REGISTRY_DIR"/*.json)
+[[ -n $hit ]] || maus_die "no manifest matches '$q'; the app is still reachable by accessibility tree (maus app tree)"
+echo "$hit"

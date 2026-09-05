@@ -1,0 +1,21 @@
+#!/bin/bash
+# maus:group=agent
+# maus:summary=List the bots mausd knows (id, name, engine, model, busy)
+# maus:args=[--json]
+# maus:risk=safe
+# maus:rung=1
+# maus:json=true
+# maus:examples=maus agent list
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need jq
+
+bots=$(maus_api GET /api/bots) || maus_die "mausd is not answering on $MAUSD_URL"
+if maus_want_json "$@"; then
+  echo "$bots" | jq '(if type == "object" and has("bots") then .bots else . end)'
+else
+  echo "$bots" | jq -r '(if type == "object" and has("bots") then .bots else . end)
+    | .[] | "\(.id)\t\(.name // .displayName // "?")\t\(.instanceId // .driver // .engine // "")\t\(.model // "")"' \
+    | awk -F'\t' '{printf "%-38s %-22s %-14s %s\n", $1, $2, $3, $4}'
+fi

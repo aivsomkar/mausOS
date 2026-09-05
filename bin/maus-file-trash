@@ -1,0 +1,33 @@
+#!/bin/bash
+# maus:group=file
+# maus:summary=Move files to the trash (never rm); restore with maus file trash --restore
+# maus:args=<path…> | --list | --restore <name>
+# maus:risk=ask
+# maus:rung=1
+# maus:examples=maus file trash ~/Downloads/old.zip|maus file trash --list|maus file trash --restore old.zip
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need gio
+
+case "$1" in
+  --list) gio list -a standard::display-name,trash::orig-path trash:/// 2>/dev/null | sed 's/^/trash: /' ;;
+  --restore)
+    [[ -n ${2:-} ]] || maus_die "--restore needs a name"
+    orig=$(gio info "trash:///$2" 2>/dev/null | sed -n 's/^ *trash::orig-path: //p')
+    [[ -n $orig ]] || maus_die "no '$2' in trash"
+    gio move "trash:///$2" "$orig"
+    maus_log "restore $orig"
+    echo "restored $orig"
+    ;;
+  *)
+    for f in "$@"; do
+      f="${f/#\~/$HOME}"
+      [[ -e $f ]] || maus_die "no such file: $f"
+      gio trash "$f"
+      maus_log "trash $f"
+      echo "trashed $f"
+    done
+    ;;
+esac

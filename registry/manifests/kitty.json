@@ -1,0 +1,22 @@
+{
+  "id": "kitty",
+  "name": "kitty",
+  "kind": "terminal",
+  "match": { "class": ["kitty"], "desktop": ["kitty.desktop"], "binary": ["kitty", "kitten"] },
+  "rungs": {
+    "1": [
+      { "channel": "socket", "how": "kitten @ --to unix:/tmp/kitty ls | send-text | get-text | launch | focus-window | set-colors (needs allow_remote_control yes and listen_on unix:/tmp/kitty)", "notes": "Complete remote control: read any pane's text, type into it, open new windows and tabs. Better than tmux for kitty users." },
+      { "channel": "cli", "how": "kitty -e <cmd> | --directory <dir> | --class <class> | -T <title>", "notes": "" }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/kitty/kitty.conf (reload with SIGUSR1 or kitten @ load-config)", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "list_windows", "rung": 1, "risk": "safe", "run": "kitten @ --to unix:/tmp/kitty ls" },
+    { "name": "read_pane", "rung": 1, "risk": "safe", "run": "kitten @ --to unix:/tmp/kitty get-text --match id:{id}" },
+    { "name": "type", "rung": 1, "risk": "ask", "run": "kitten @ --to unix:/tmp/kitty send-text --match id:{id} {text}\\n" }
+  ],
+  "quirks": ["Remote control is off by default; MausOS Phase 1 enables it with a listen socket per session."],
+  "verified": "curated-2026-09"
+}

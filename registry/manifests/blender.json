@@ -1,0 +1,26 @@
+{
+  "id": "blender",
+  "name": "Blender",
+  "kind": "3d",
+  "match": { "class": ["blender", "Blender"], "desktop": ["blender.desktop", "org.blender.Blender.desktop"], "binary": ["blender"] },
+  "rungs": {
+    "1": [
+      { "channel": "api", "how": "blender -b <file.blend> --python <script.py> | --python-expr '<code>' | -o <path> -f <frame> | -a (animation) | -E CYCLES", "notes": "The whole application is scriptable through bpy. Render, export, modify scenes, all headless." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/blender/<ver>/config/userpref.blend; startup.blend; scripts/addons", "notes": "Preferences are binary; set them through bpy.context.preferences in a script instead." }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "None. Blender draws its own UI (no toolkit); the tree is empty.", "notes": "For interactive work fall to rung 4/5, but almost everything is reachable through bpy." }
+    ]
+  },
+  "capabilities": [
+    { "name": "render_frame", "rung": 1, "risk": "safe", "run": "blender -b {file} -o {out} -F PNG -f {frame}" },
+    { "name": "render_animation", "rung": 1, "risk": "safe", "run": "blender -b {file} -o {out} -a" },
+    { "name": "run_script", "rung": 1, "risk": "ask", "run": "blender -b {file} --python {script}" },
+    { "name": "export_gltf", "rung": 1, "risk": "safe", "run": "blender -b {file} --python-expr \"import bpy; bpy.ops.export_scene.gltf(filepath='{out}')\"" },
+    { "name": "open", "rung": 1, "risk": "safe", "run": "blender {file}" }
+  ],
+  "quirks": ["Saving from a script writes the .blend; take a checkpoint first (maus file snapshot)."],
+  "verified": "curated-2026-09"
+}

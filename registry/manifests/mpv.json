@@ -1,0 +1,23 @@
+{
+  "id": "mpv",
+  "name": "mpv",
+  "kind": "media-player",
+  "match": { "class": ["mpv"], "desktop": ["mpv.desktop"], "binary": ["mpv"] },
+  "rungs": {
+    "1": [
+      { "channel": "socket", "how": "mpv --input-ipc-server=/tmp/mpv.sock <file>; then echo '{\"command\":[\"set_property\",\"pause\",true]}' | socat - /tmp/mpv.sock (JSON IPC: get/set any property, loadfile, seek, observe_property)", "notes": "Complete control and state." },
+      { "channel": "dbus", "how": "MPRIS org.mpris.MediaPlayer2.mpv (with the mpv-mpris plugin): playerctl -p mpv play-pause|next|position", "notes": "Same as every other player." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/mpv/mpv.conf, input.conf; scripts/ for Lua", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "play", "rung": 1, "risk": "safe", "run": "mpv --input-ipc-server=/tmp/mpv.sock {file}" },
+    { "name": "pause_toggle", "rung": 1, "risk": "safe", "run": "echo '{\"command\":[\"cycle\",\"pause\"]}' | socat - /tmp/mpv.sock" },
+    { "name": "seek", "rung": 1, "risk": "safe", "run": "echo '{\"command\":[\"seek\",{seconds},\"relative\"]}' | socat - /tmp/mpv.sock" },
+    { "name": "get_position", "rung": 1, "risk": "safe", "run": "echo '{\"command\":[\"get_property\",\"time-pos\"]}' | socat - /tmp/mpv.sock" }
+  ],
+  "quirks": [],
+  "verified": "curated-2026-09"
+}

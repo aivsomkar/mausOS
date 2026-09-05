@@ -1,0 +1,25 @@
+{
+  "id": "gimp",
+  "name": "GIMP",
+  "kind": "image-editor",
+  "match": { "class": ["gimp", "Gimp", "gimp-3.0"], "desktop": ["gimp.desktop", "org.gimp.GIMP.desktop"], "binary": ["gimp"] },
+  "rungs": {
+    "1": [
+      { "channel": "api", "how": "gimp -i -b '(script-fu code)' -b '(gimp-quit 0)' (batch mode); GIMP 3: Python plug-ins via GObject introspection (Gimp, Gegl) and `gimp --batch-interpreter=python-fu-eval -b '<python>'`", "notes": "Resize, crop, convert, filters, all headless. For simple conversions ImageMagick (`magick`) is faster." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/GIMP/3.0/ (gimprc, sessionrc, tool options)", "notes": "" }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "GTK3 tree: menus, dialogs, dockable panels and tool options by name. The canvas itself is a single drawing area.", "notes": "Good for dialogs; use the API for pixels." }
+    ]
+  },
+  "capabilities": [
+    { "name": "open", "rung": 1, "risk": "safe", "run": "gimp {file}" },
+    { "name": "batch_python", "rung": 1, "risk": "ask", "run": "gimp -i --batch-interpreter=python-fu-eval -b {python} -b 'quit()'" },
+    { "name": "resize_with_magick", "rung": 1, "risk": "safe", "run": "magick {in} -resize {w}x{h} {out}" },
+    { "name": "menu", "rung": 3, "risk": "ask", "run": "maus app press gimp {menu_item}" }
+  ],
+  "quirks": ["Batch mode runs in the same process as a GUI instance if one is open; use a separate session or close it."],
+  "verified": "curated-2026-09"
+}

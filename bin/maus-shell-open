@@ -1,0 +1,72 @@
+#!/bin/bash
+# maus:group=shell
+# maus:summary=Open the MausOS shell (OpenMausBot UI) as an app window on the "maus" special workspace
+# maus:args=[--background] [--here]
+# maus:risk=safe
+# maus:rung=4
+# maus:examples=maus shell open|maus shell open --background
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+
+background=0
+here=0
+for a in "$@"; do
+  case "$a" in
+    --background) background=1 ;;
+    --here) here=1 ;;
+  esac
+done
+
+# Already open? Just show it.
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  existing=$(hyprctl clients -j | jq -r '.[] | select(.class == "mausos-shell") | .address' | head -1)
+  if [[ -n $existing ]]; then
+    [[ $background -eq 1 ]] || hyprctl dispatch togglespecialworkspace maus >/dev/null
+    echo "$existing"
+    exit 0
+  fi
+fi
+
+# Wait for mausd (up to 60s; at login it may still be starting).
+for ((i = 0; i < 60; i++)); do
+  curl -fsS --max-time 2 "$MAUSD_URL/api/health" >/dev/null 2>&1 && break
+  sleep 1
+done
+curl -fsS --max-time 2 "$MAUSD_URL/api/health" >/dev/null 2>&1 || maus_die "mausd is not answering on $MAUSD_URL (systemctl --user status mausd)"
+
+profile="$MAUS_DATA_DIR/shell-profile"
+mkdir -p "$profile"
+if command -v chromium >/dev/null 2>&1; then
+  setsid -f chromium \
+    --class=mausos-shell \
+    --user-data-dir="$profile" \
+    --app="$MAUSD_URL" \
+    --force-renderer-accessibility \
+    --no-first-run --no-default-browser-check \
+    >/dev/null 2>&1
+elif command -v omarchy-launch-webapp >/dev/null 2>&1; then
+  setsid -f omarchy-launch-webapp "$MAUSD_URL" >/dev/null 2>&1
+else
+  setsid -f xdg-open "$MAUSD_URL" >/dev/null 2>&1
+  echo "opened $MAUSD_URL in the default browser (chromium gives a proper shell window)"
+  exit 0
+fi
+maus_log "shell open"
+
+# Park it on the special workspace once the window exists.
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  addr=""
+  for ((i = 0; i < 40; i++)); do
+    sleep 0.25
+    addr=$(hyprctl clients -j | jq -r '.[] | select(.class == "mausos-shell") | .address' | head -1)
+    [[ -n $addr ]] && break
+  done
+  if [[ -n $addr && $here -eq 0 ]]; then
+    hyprctl dispatch movetoworkspacesilent "special:maus,address:$addr" >/dev/null
+    [[ $background -eq 1 ]] || hyprctl dispatch togglespecialworkspace maus >/dev/null
+  fi
+  echo "${addr:-opened}"
+else
+  echo "opened"
+fi

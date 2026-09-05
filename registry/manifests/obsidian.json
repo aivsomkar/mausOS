@@ -1,0 +1,25 @@
+{
+  "id": "obsidian",
+  "name": "Obsidian",
+  "kind": "notes",
+  "match": { "class": ["obsidian", "Obsidian", "md.obsidian.Obsidian"], "desktop": ["obsidian.desktop", "md.obsidian.Obsidian.desktop"], "binary": ["obsidian"] },
+  "rungs": {
+    "1": [
+      { "channel": "data", "how": "The vault is a folder of Markdown files. Read and write them directly; Obsidian reloads. Frontmatter is YAML; links are [[wikilinks]].", "notes": "This is the whole API for most tasks." },
+      { "channel": "cli", "how": "obsidian://open?vault=<name>&file=<path> | obsidian://new?vault=…&name=…&content=… | obsidian://search?query=… (xdg-open the URI)", "notes": "Open, create, search from outside." }
+    ],
+    "2": [
+      { "channel": "config", "how": "<vault>/.obsidian/*.json (app, appearance, hotkeys, community-plugins, workspace)", "notes": "" }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Electron; tree appears with --force-renderer-accessibility (MausOS sets it in ~/.config/electron-flags.conf for the Arch package; the AppImage/Flatpak need the env var ELECTRON_ENABLE_ACCESSIBILITY or the flag).", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "open_note", "rung": 1, "risk": "safe", "run": "xdg-open 'obsidian://open?vault={vault}&file={path}'" },
+    { "name": "new_note", "rung": 1, "risk": "ask", "run": "printf '%s' {content} > {vault_dir}/{path}.md" },
+    { "name": "search", "rung": 1, "risk": "safe", "run": "rg -il {query} {vault_dir}" }
+  ],
+  "quirks": ["Write notes as files; do not type into the editor."],
+  "verified": "curated-2026-09"
+}

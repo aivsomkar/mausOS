@@ -1,0 +1,36 @@
+#!/bin/bash
+# maus:group=win
+# maus:summary=Take a lease on a window for an agent: green border, recorded, releasable
+# maus:args=<address|class|title> [--by <bot>]
+# maus:risk=ask
+# maus:rung=4
+# maus:examples=maus win lease firefox --by maus
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need jq
+
+by="agent"
+args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --by) by=$2; shift 2 ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+addr=$("$MAUS_BIN_DIR/maus-win-focus" "${args[0]}")
+
+mkdir -p "$MAUS_RUNTIME_DIR"
+leases="$MAUS_RUNTIME_DIR/leases"
+touch "$leases"
+grep -v "^$addr"$'\t' "$leases" > "$leases.tmp" || true
+printf '%s\t%s\t%s\n' "$addr" "$by" "$(date -Is)" >> "$leases.tmp"
+mv "$leases.tmp" "$leases"
+
+# Green frame while the agent holds the window. Ignored on Hyprland builds
+# without setprop; the lease record still exists.
+maus_hypr setprop "address:$addr" activebordercolor "rgb(38d591)" >/dev/null 2>&1 || true
+maus_hypr setprop "address:$addr" inactivebordercolor "rgb(178f5c)" >/dev/null 2>&1 || true
+maus_log "lease $addr by $by"
+echo "$addr"

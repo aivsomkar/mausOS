@@ -1,0 +1,52 @@
+#!/bin/bash
+# maus:group=term
+# maus:summary=Open (or reuse) a named shared tmux session and show it in a terminal window
+# maus:args=<name> [--cwd DIR] [--hidden]
+# maus:risk=safe
+# maus:rung=1
+# maus:examples=maus term open build --cwd ~/code/app|maus term open scratch --hidden
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need tmux
+
+name=$1; shift
+cwd="$HOME"
+hidden=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --cwd) cwd=$2; shift 2 ;;
+    --hidden) hidden=1; shift ;;
+    *) shift ;;
+  esac
+done
+session="maus-$name"
+
+if ! tmux has-session -t "$session" 2>/dev/null; then
+  tmux new-session -d -s "$session" -c "$cwd" -x 200 -y 50
+  tmux set-option -t "$session" history-limit 20000 >/dev/null
+  maus_log "term open $session in $cwd"
+fi
+
+if [[ $hidden -eq 0 ]]; then
+  # Show it unless a terminal is already attached.
+  if [[ $(tmux list-clients -t "$session" 2>/dev/null | wc -l) -eq 0 ]]; then
+    term="${TERMINAL:-}"
+    for cand in "$term" alacritty kitty ghostty foot wezterm xterm; do
+      [[ -n $cand ]] && command -v "$cand" >/dev/null 2>&1 && { term=$cand; break; }
+    done
+    if [[ -n $term ]]; then
+      case "$term" in
+        alacritty) setsid -f alacritty --class mausos-term -T "maus: $name" -e tmux attach -t "$session" >/dev/null 2>&1 ;;
+        kitty) setsid -f kitty --class mausos-term -T "maus: $name" tmux attach -t "$session" >/dev/null 2>&1 ;;
+        ghostty) setsid -f ghostty --class=mausos-term --title="maus: $name" -e tmux attach -t "$session" >/dev/null 2>&1 ;;
+        foot) setsid -f foot -a mausos-term -T "maus: $name" tmux attach -t "$session" >/dev/null 2>&1 ;;
+        *) setsid -f "$term" -e tmux attach -t "$session" >/dev/null 2>&1 ;;
+      esac
+    else
+      maus_warn "no terminal emulator found; session runs headless (tmux attach -t $session)"
+    fi
+  fi
+fi
+echo "$session"

@@ -1,0 +1,53 @@
+#!/bin/bash
+# maus:group=win
+# maus:summary=Send keyboard input to the focused window (type text, or a key chord). Rung 4: prefer maus app set/press.
+# maus:args=type <text> | key <chord>   (chord like ctrl+s, Return, alt+F4)
+# maus:risk=ask
+# maus:rung=4
+# maus:examples=maus win input type "hello"|maus win input key ctrl+s|maus win input key Return
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 2 ]] || { maus_usage; exit 1; }
+maus_need wtype
+
+mode=$1; shift
+case "$mode" in
+  type)
+    text="$*"
+    maus_log "type ${#text} chars"
+    wtype -- "$text"
+    ;;
+  key)
+    chord=$1
+    IFS='+' read -ra parts <<< "$chord"
+    key=${parts[-1]}
+    unset 'parts[-1]'
+    cmd=(wtype)
+    for m in "${parts[@]}"; do
+      case "${m,,}" in
+        ctrl|control) cmd+=(-M ctrl) ;;
+        shift) cmd+=(-M shift) ;;
+        alt) cmd+=(-M alt) ;;
+        super|win|logo) cmd+=(-M logo) ;;
+        *) maus_die "unknown modifier: $m" ;;
+      esac
+    done
+    if [[ ${#key} -eq 1 ]]; then
+      cmd+=("$key")
+    else
+      cmd+=(-k "$key")
+    fi
+    for m in "${parts[@]}"; do
+      case "${m,,}" in
+        ctrl|control) cmd+=(-m ctrl) ;;
+        shift) cmd+=(-m shift) ;;
+        alt) cmd+=(-m alt) ;;
+        super|win|logo) cmd+=(-m logo) ;;
+      esac
+    done
+    maus_log "key $chord"
+    "${cmd[@]}"
+    ;;
+  *) maus_die "mode must be 'type' or 'key'" ;;
+esac

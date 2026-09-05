@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MausOS
+Comment=Talk to your agents
+Exec=maus-shell-open
+Icon=utilities-terminal
+Terminal=false
+StartupNotify=true
+StartupWMClass=mausos-shell
+Categories=System;Utility;
+Keywords=maus;agent;ai;chat;

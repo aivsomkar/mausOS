@@ -1,0 +1,22 @@
+#!/bin/bash
+# maus:group=net
+# maus:summary=Connect to a Wi‑Fi network (saved password reused; pass one for a new network)
+# maus:args=<ssid> [password]
+# maus:risk=ask
+# maus:rung=1
+# maus:examples=maus net connect "Home 5G"|maus net connect Cafe hunter2
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need nmcli
+
+ssid=$1
+maus_log "net connect $ssid"
+if nmcli -t -f NAME con show | grep -qxF -- "$ssid"; then
+  nmcli con up id "$ssid"
+elif [[ $# -ge 2 ]]; then
+  nmcli dev wifi connect "$ssid" password "$2"
+else
+  nmcli dev wifi connect "$ssid"
+fi

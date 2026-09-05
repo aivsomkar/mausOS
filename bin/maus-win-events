@@ -1,0 +1,26 @@
+#!/bin/bash
+# maus:group=win
+# maus:summary=Stream Hyprland events (window open/close/focus, workspace) as JSON lines
+# maus:args=[--once]
+# maus:risk=safe
+# maus:rung=4
+# maus:json=true
+# maus:examples=maus win events|maus win events --once
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need socat
+[[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || maus_die "not inside a Hyprland session"
+
+sock="${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+[[ -S $sock ]] || maus_die "no event socket at $sock"
+
+once=0
+[[ "${1:-}" == "--once" ]] && once=1
+
+socat -u "UNIX-CONNECT:$sock" - | while IFS= read -r line; do
+  event=${line%%>>*}
+  data=${line#*>>}
+  printf '{"event":"%s","data":"%s","at":"%s"}\n' "$(maus_json_escape "$event")" "$(maus_json_escape "$data")" "$(date -Is)"
+  [[ $once -eq 1 ]] && break
+done

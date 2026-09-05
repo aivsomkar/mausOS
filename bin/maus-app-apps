@@ -1,0 +1,12 @@
+#!/bin/bash
+# maus:group=app
+# maus:summary=List running applications that publish an accessibility tree
+# maus:args=
+# maus:risk=safe
+# maus:rung=3
+# maus:json=true
+# maus:examples=maus app apps
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_atspi apps

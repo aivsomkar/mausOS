@@ -1,0 +1,30 @@
+{
+  "id": "code",
+  "name": "Visual Studio Code",
+  "kind": "editor",
+  "match": { "class": ["code", "Code", "code-oss", "code-url-handler", "codium", "VSCodium"], "desktop": ["code.desktop", "code-oss.desktop", "codium.desktop"], "binary": ["code", "code-oss", "codium"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "code <path> | code -g <file>:<line> | code -r (reuse window) | code --diff a b | code --install-extension <id> | code --list-extensions", "notes": "Opening files and folders, diffs, extensions. Fast and exact." },
+      { "channel": "api", "how": "A tiny extension exposing a local socket or the built-in Remote Tunnels / `code serve-web` for browser control", "notes": "Phase 1 option for command palette actions without a11y." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/Code/User/settings.json, keybindings.json, snippets/; .vscode/settings.json per workspace", "notes": "Live-reloaded. Preferred way to change behaviour." }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Electron: needs --force-renderer-accessibility (MausOS sets it in ~/.config/electron-flags.conf; the Arch code package honours it). Editor text is exposed as a document; command palette entries are list items.", "notes": "Prefer editing files on disk; VS Code reloads them." }
+    ]
+  },
+  "capabilities": [
+    { "name": "open", "rung": 1, "risk": "safe", "run": "code -r {path}" },
+    { "name": "open_at_line", "rung": 1, "risk": "safe", "run": "code -r -g {file}:{line}" },
+    { "name": "diff", "rung": 1, "risk": "safe", "run": "code --diff {a} {b}" },
+    { "name": "install_extension", "rung": 1, "risk": "ask", "run": "code --install-extension {id}" },
+    { "name": "set_setting", "rung": 2, "risk": "ask", "run": "jq '.[\"{key}\"] = {value}' ~/.config/Code/User/settings.json" }
+  ],
+  "quirks": [
+    "The edit is best done on disk with the agent's file tools; VS Code picks it up.",
+    "Terminal panes inside VS Code are readable as text through the tree, but a maus term session is simpler."
+  ],
+  "verified": "curated-2026-09"
+}

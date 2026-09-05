@@ -1,0 +1,67 @@
+#!/bin/bash
+# maus:group=app
+# maus:summary=Launch an application by desktop id or name; prints its address once its window appears
+# maus:args=<id|name> [--wait <seconds>] [-- args…]
+# maus:risk=safe
+# maus:rung=1
+# maus:examples=maus app launch firefox|maus app launch org.blender.Blender|maus app launch firefox -- https://hyprland.org
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need jq
+
+q=$1; shift
+wait_s=8
+extra=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --wait) wait_s=$2; shift 2 ;;
+    --) shift; extra=("$@"); break ;;
+    *) extra+=("$1"); shift ;;
+  esac
+done
+
+entry=$("$MAUS_BIN_DIR/maus-app-list" "$q" | jq -r --arg q "$q" '
+  (map(select(.id == $q)) + map(select((.name | ascii_downcase) == ($q | ascii_downcase))) + .)
+  | .[0] // empty')
+[[ -n $entry ]] || maus_die "no application matches '$q' (maus app list)"
+id=$(jq -r .id <<< "$entry")
+file=$(jq -r .file <<< "$entry")
+class=$(jq -r '.class // ""' <<< "$entry")
+exec_=$(jq -r .exec <<< "$entry")
+
+before=""
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl >/dev/null 2>&1; then
+  before=$(hyprctl clients -j | jq -r '.[].address' | sort)
+fi
+
+maus_log "launch $id ${extra[*]:-}"
+if [[ ${#extra[@]} -eq 0 ]] && command -v gio >/dev/null 2>&1; then
+  gio launch "$file" >/dev/null 2>&1 &
+elif [[ ${#extra[@]} -gt 0 ]] && command -v gio >/dev/null 2>&1; then
+  gio launch "$file" "${extra[@]}" >/dev/null 2>&1 &
+else
+  # shellcheck disable=SC2086
+  setsid -f $exec_ "${extra[@]}" >/dev/null 2>&1 &
+fi
+
+# Report the new window's address when Hyprland shows it.
+if [[ -n $before ]]; then
+  for ((i = 0; i < wait_s * 4; i++)); do
+    sleep 0.25
+    now=$(hyprctl clients -j | jq -r '.[].address' | sort)
+    new=$(comm -13 <(echo "$before") <(echo "$now") | head -1)
+    if [[ -n $new ]]; then
+      hyprctl clients -j | jq -c --arg a "$new" '.[] | select(.address == $a) | {address, class, title, pid, workspace: .workspace.name}'
+      exit 0
+    fi
+  done
+  # Maybe it focused an existing window (single-instance apps).
+  if [[ -n $class ]]; then
+    hyprctl clients -j | jq -c --arg c "$class" '.[] | select(.class == $c) | {address, class, title, pid, workspace: .workspace.name}' | head -1
+  fi
+  echo "launched $id (no new window seen within ${wait_s}s)"
+else
+  echo "launched $id"
+fi

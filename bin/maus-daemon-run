@@ -1,0 +1,29 @@
+#!/bin/bash
+# maus:group=daemon
+# maus:summary=Run mausd (the OpenMausBot harness server) in the foreground; what the systemd unit executes
+# maus:args=
+# maus:risk=safe
+# maus:rung=1
+# maus:examples=maus daemon run
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+
+checkout="${MAUSOS_OPENMAUSBOT_DIR:-$MAUS_DATA_DIR/openmausbot}"
+server="$checkout/dist-server/index.js"
+[[ -f $server ]] || maus_die "OpenMausBot is not built at $checkout (run: bash install.sh --only mausd)"
+
+# systemd user services do not get the login shell's PATH. Add the places
+# agent CLIs and node usually live; the server probes the login shell too.
+extra="$HOME/.local/bin:$HOME/.local/share/mise/shims:$HOME/.bun/bin:$HOME/.npm-global/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:/usr/local/bin"
+for d in "$HOME"/.nvm/versions/node/*/bin; do [[ -d $d ]] && extra="$extra:$d"; done
+export PATH="$extra:$PATH"
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise env -s bash 2>/dev/null || true)"
+fi
+
+export OMB_PORT="${OMB_PORT:-8799}"
+export OMB_STATIC_DIR="${OMB_STATIC_DIR:-$checkout/dist}"
+export MAUSOS=1
+cd "$checkout"
+exec node "$server"

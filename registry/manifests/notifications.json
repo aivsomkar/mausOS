@@ -1,0 +1,19 @@
+{
+  "id": "notifications",
+  "name": "Desktop notifications",
+  "kind": "system-service",
+  "match": { "class": [], "desktop": [], "binary": ["notify-send", "makoctl", "dunstctl"] },
+  "rungs": {
+    "1": [
+      { "channel": "dbus", "how": "org.freedesktop.Notifications on the session bus: Notify(app, id, icon, summary, body, actions, hints, timeout); NotificationClosed and ActionInvoked signals. Read incoming ones with `busctl --user monitor org.freedesktop.Notifications` or `dbus-monitor \"interface='org.freedesktop.Notifications'\"`.", "notes": "Sending is maus sys notify. Monitoring is a Phase 2 observation source (what the user was told, by which app)." },
+      { "channel": "cli", "how": "notify-send -a <app> -u low|normal|critical -A action=label <summary> <body> (prints the chosen action); makoctl list|dismiss|restore (Omarchy 3) / Quickshell's own service (Omarchy 4)", "notes": "" }
+    ]
+  },
+  "capabilities": [
+    { "name": "notify", "rung": 1, "risk": "safe", "run": "maus sys notify {title} {body}" },
+    { "name": "notify_with_actions", "rung": 1, "risk": "safe", "run": "notify-send -a MausOS -A yes=Yes -A no=No {title} {body}" },
+    { "name": "monitor", "rung": 1, "risk": "safe", "run": "busctl --user monitor org.freedesktop.Notifications" }
+  ],
+  "quirks": ["Action buttons depend on the notification daemon; Omarchy 4's Quickshell supports them."],
+  "verified": "curated-2026-09"
+}

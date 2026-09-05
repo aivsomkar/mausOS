@@ -1,0 +1,26 @@
+#!/bin/bash
+# maus:group=win
+# maus:summary=Focus a window by address, class or title (substring)
+# maus:args=<address|class|title>
+# maus:risk=safe
+# maus:rung=4
+# maus:examples=maus win focus firefox|maus win focus 0x55d0c3a1b2c0
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+[[ $# -ge 1 ]] || { maus_usage; exit 1; }
+maus_need jq
+
+q=$1
+if [[ $q == 0x* ]]; then
+  addr=$q
+else
+  addr=$(maus_hypr clients -j | jq -r --arg q "$q" '
+    map(select(.mapped == true))
+    | (map(select(.class == $q)) + map(select((.class | ascii_downcase | contains($q | ascii_downcase)))) + map(select((.title | ascii_downcase | contains($q | ascii_downcase)))))
+    | .[0].address // empty')
+fi
+[[ -n $addr ]] || maus_die "no window matches '$q' (maus win list)"
+maus_hypr dispatch focuswindow "address:$addr" >/dev/null
+maus_log "focus $addr ($q)"
+echo "$addr"

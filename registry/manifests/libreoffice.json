@@ -1,0 +1,26 @@
+{
+  "id": "libreoffice",
+  "name": "LibreOffice",
+  "kind": "office",
+  "match": { "class": ["libreoffice", "libreoffice-writer", "libreoffice-calc", "libreoffice-impress", "soffice"], "desktop": ["libreoffice-writer.desktop", "libreoffice-calc.desktop", "libreoffice-impress.desktop", "libreoffice-startcenter.desktop"], "binary": ["soffice", "libreoffice"] },
+  "rungs": {
+    "1": [
+      { "channel": "cli", "how": "soffice --headless --convert-to pdf|docx|xlsx|csv <file> --outdir <dir>; soffice --headless --print-to-file; --writer|--calc <file>", "notes": "Conversion and export with no window." },
+      { "channel": "api", "how": "UNO: soffice --accept='socket,host=127.0.0.1,port=2002;urp;' then python3 with `import uno` to open documents, read/write cells and text, run macros", "notes": "Full document model. python-libreoffice ships with the Arch package." }
+    ],
+    "2": [
+      { "channel": "config", "how": "~/.config/libreoffice/4/user/registrymodifications.xcu", "notes": "Rarely needed." }
+    ],
+    "3": [
+      { "channel": "atspi", "how": "Excellent tree (GTK3/4 VCL): menus, toolbars, dialogs, document text and spreadsheet cells by name (e.g. 'A1').", "notes": "Cells are table cells named by their address." }
+    ]
+  },
+  "capabilities": [
+    { "name": "convert", "rung": 1, "risk": "safe", "run": "soffice --headless --convert-to {format} {file} --outdir {dir}" },
+    { "name": "open", "rung": 1, "risk": "safe", "run": "soffice {file}" },
+    { "name": "read_cell", "rung": 3, "risk": "safe", "run": "maus app find libreoffice {cell} --role 'table cell'" },
+    { "name": "press_menu", "rung": 3, "risk": "ask", "run": "maus app press libreoffice {menu_item}" }
+  ],
+  "quirks": ["A running GUI instance and a headless instance share the profile; --convert-to may wait on the GUI. Use a separate -env:UserInstallation for batch jobs."],
+  "verified": "curated-2026-09"
+}

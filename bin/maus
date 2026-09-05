@@ -1,0 +1,179 @@
+#!/bin/bash
+# maus:group=core
+# maus:summary=The MausOS command family: list, describe and dispatch maus-* commands
+# maus:args=[<group> [<name>] [args…]] | help [<group>] | list [--json] | version
+# maus:risk=safe
+# maus:rung=1
+# maus:hidden=true
+#
+# Discovery: every executable `maus-<group>-<name>` next to this file (or in
+# MAUS_BIN_DIR) is a command. Metadata is read from `# maus:key=value` lines
+# in the first 40 lines. `maus list --json` is the machine-readable catalogue
+# that `maus mcp` serves as tools. Pattern borrowed from Omarchy's `omarchy`.
+set -euo pipefail
+
+MAUS_REAL=$(readlink -f "${BASH_SOURCE[0]}")
+MAUS_BIN_DIR="${MAUS_BIN_DIR:-$(cd "$(dirname "$MAUS_REAL")" && pwd)}"
+MAUS_DIR="$(cd "$MAUS_BIN_DIR/.." && pwd)"
+export MAUS_BIN_DIR MAUS_DIR
+MAUS_VERSION="0.0.1"
+
+declare -A GROUP_DESCRIPTIONS=(
+  [win]="Windows and workspaces (Hyprland IPC, virtual input)"
+  [app]="Applications: launch, accessibility tree, press, set, read"
+  [sys]="Session: notifications, clipboard"
+  [term]="Shared terminal (tmux): open, send, read, wait"
+  [see]="Vision: screenshots (rung 5, use last)"
+  [pkg]="Packages: search, add, remove"
+  [net]="Network (NetworkManager)"
+  [hw]="Hardware: audio, brightness"
+  [file]="Files: search, trash, checkpoints"
+  [registry]="Capability registry: how each app can be driven"
+  [shell]="The MausOS shell window"
+  [agent]="Bots through mausd: list, send, stop"
+  [daemon]="The mausd service"
+  [core]="MausOS itself"
+)
+GROUP_ORDER=(app win term file pkg net hw sys see registry agent shell daemon core)
+
+# meta <file> <key>  → value or empty
+meta() {
+  sed -n "1,40{s/^# maus:$2=//p}" "$1" | head -1
+}
+
+# name of a command file → group and subcommand
+split_name() {
+  local base=${1##*/}
+  base=${base#maus-}
+  CMD_GROUP=${base%%-*}
+  if [[ $base == *-* ]]; then
+    CMD_NAME=${base#*-}
+  else
+    CMD_NAME=""
+  fi
+}
+
+json_escape() {
+  local s=$1
+  s=${s//\\/\\\\}
+  s=${s//\"/\\\"}
+  s=${s//$'\n'/\\n}
+  s=${s//$'\t'/\\t}
+  printf '%s' "$s"
+}
+
+list_files() {
+  local f
+  for f in "$MAUS_BIN_DIR"/maus-*; do
+    [[ -f $f ]] || continue
+    printf '%s\n' "$f"
+  done
+}
+
+cmd_list_json() {
+  local f first=1
+  printf '['
+  while IFS= read -r f; do
+    [[ -n $f ]] || continue
+    [[ $(meta "$f" hidden) == "true" ]] && continue
+    split_name "$f"
+    local group summary args risk rung sudo examples jsonflag
+    group=$(meta "$f" group); [[ -n $group ]] || group=$CMD_GROUP
+    summary=$(meta "$f" summary)
+    args=$(meta "$f" args)
+    risk=$(meta "$f" risk); [[ -n $risk ]] || risk=ask
+    rung=$(meta "$f" rung); [[ -n $rung ]] || rung=1
+    sudo=$(meta "$f" requires-sudo); [[ $sudo == "true" ]] || sudo=false
+    jsonflag=$(meta "$f" json); [[ $jsonflag == "true" ]] || jsonflag=false
+    examples=$(meta "$f" examples)
+    [[ $first -eq 1 ]] || printf ','
+    first=0
+    printf '{"command":"%s","group":"%s","name":"%s","summary":"%s","args":"%s","risk":"%s","rung":%s,"requiresSudo":%s,"json":%s,"examples":[' \
+      "$(json_escape "${f##*/}")" "$(json_escape "$group")" "$(json_escape "$CMD_NAME")" \
+      "$(json_escape "$summary")" "$(json_escape "$args")" "$(json_escape "$risk")" "$rung" "$sudo" "$jsonflag"
+    if [[ -n $examples ]]; then
+      local ex efirst=1
+      IFS='|' read -ra EXS <<< "$examples"
+      for ex in "${EXS[@]}"; do
+        [[ $efirst -eq 1 ]] || printf ','
+        efirst=0
+        printf '"%s"' "$(json_escape "$ex")"
+      done
+    fi
+    printf ']}'
+  done < <(list_files)
+  printf ']\n'
+}
+
+print_group() {
+  local want=$1 f
+  local rows=()
+  while IFS= read -r f; do
+    [[ -n $f ]] || continue
+    [[ $(meta "$f" hidden) == "true" ]] && continue
+    split_name "$f"
+    local group
+    group=$(meta "$f" group); [[ -n $group ]] || group=$CMD_GROUP
+    [[ $group == "$want" ]] || continue
+    local risk rung
+    risk=$(meta "$f" risk); [[ -n $risk ]] || risk=ask
+    rung=$(meta "$f" rung); [[ -n $rung ]] || rung=1
+    rows+=("$(printf '%s %s\t%s\t%s' "$group" "$CMD_NAME" "$(meta "$f" summary)" "r$rung/$risk")")
+  done < <(list_files)
+  [[ ${#rows[@]} -gt 0 ]] || return 0
+  printf '\n%s  %s\n' "$want" "${GROUP_DESCRIPTIONS[$want]:-}"
+  local row
+  for row in "${rows[@]}"; do
+    IFS=$'\t' read -r name summary tag <<< "$row"
+    printf '  maus %-24s %-56s %s\n' "$name" "$summary" "$tag"
+  done
+}
+
+cmd_help() {
+  local group=${1:-}
+  if [[ -n $group ]]; then
+    [[ -n ${GROUP_DESCRIPTIONS[$group]:-} ]] || { echo "no such group: $group" >&2; exit 1; }
+    print_group "$group"
+    return 0
+  fi
+  echo "maus $MAUS_VERSION · structure before pixels"
+  echo "usage: maus <group> <name> [args]   maus help [group]   maus list --json   maus doctor"
+  echo "tags:  r<rung>/<risk>   rung 1 native · 2 config · 3 a11y tree · 4 compositor · 5 vision"
+  local g
+  for g in "${GROUP_ORDER[@]}"; do
+    print_group "$g"
+  done
+  echo
+}
+
+dispatch() {
+  local group=$1; shift
+  local name=${1:-}
+  local file
+  # Single-word commands (maus-doctor, maus-mcp): maus doctor
+  if [[ -x "$MAUS_BIN_DIR/maus-$group" && ( -z $name || ! -x "$MAUS_BIN_DIR/maus-$group-$name" ) ]]; then
+    file="$MAUS_BIN_DIR/maus-$group"
+    exec "$file" "$@"
+  fi
+  [[ -n $name ]] || { echo "maus: '$group' needs a subcommand:" >&2; print_group "$group" >&2; exit 1; }
+  shift
+  file="$MAUS_BIN_DIR/maus-$group-$name"
+  if [[ -x $file ]]; then
+    exec "$file" "$@"
+  fi
+  echo "maus: unknown command '$group $name'" >&2
+  local f
+  for f in "$MAUS_BIN_DIR"/maus-"$group"-*; do
+    [[ -f $f ]] && echo "  did you mean: maus $group ${f##*/maus-$group-}" >&2
+  done
+  exit 1
+}
+
+case "${1:-help}" in
+  help|-h|--help) cmd_help "${2:-}" ;;
+  list)
+    if [[ "${2:-}" == "--json" ]]; then cmd_list_json; else cmd_help; fi
+    ;;
+  version|--version|-v) echo "maus $MAUS_VERSION ($MAUS_DIR)" ;;
+  *) dispatch "$@" ;;
+esac

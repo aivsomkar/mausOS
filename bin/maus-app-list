@@ -1,0 +1,48 @@
+#!/bin/bash
+# maus:group=app
+# maus:summary=List installed applications (desktop entries) as JSON: id, name, exec, class
+# maus:args=[<filter>]
+# maus:risk=safe
+# maus:rung=1
+# maus:json=true
+# maus:examples=maus app list|maus app list fire
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/../lib/maus-common.sh"
+maus_help_if_asked "$@"
+maus_need jq
+
+filter="${1:-}"
+dirs=(
+  "$HOME/.local/share/applications"
+  "$HOME/.local/share/flatpak/exports/share/applications"
+  /var/lib/flatpak/exports/share/applications
+  /usr/local/share/applications
+  /usr/share/applications
+)
+
+seen=""
+printf '['
+first=1
+for d in "${dirs[@]}"; do
+  [[ -d $d ]] || continue
+  for f in "$d"/*.desktop; do
+    [[ -f $f ]] || continue
+    id=${f##*/}
+    case "$seen" in *"|$id|"*) continue ;; esac
+    seen="$seen|$id|"
+    grep -qE '^(NoDisplay|Hidden)=true' "$f" && continue
+    grep -qE '^Type=Application' "$f" || continue
+    name=$(sed -n '/^\[Desktop Entry\]/,/^\[/{s/^Name=//p}' "$f" | head -1)
+    exec_=$(sed -n '/^\[Desktop Entry\]/,/^\[/{s/^Exec=//p}' "$f" | head -1 | sed 's/ %[a-zA-Z]//g')
+    class=$(sed -n '/^\[Desktop Entry\]/,/^\[/{s/^StartupWMClass=//p}' "$f" | head -1)
+    if [[ -n $filter ]]; then
+      case "${id,,} ${name,,}" in *"${filter,,}"*) ;; *) continue ;; esac
+    fi
+    [[ $first -eq 1 ]] || printf ','
+    first=0
+    printf '{"id":"%s","name":"%s","exec":"%s","class":"%s","file":"%s"}' \
+      "$(maus_json_escape "${id%.desktop}")" "$(maus_json_escape "$name")" \
+      "$(maus_json_escape "$exec_")" "$(maus_json_escape "$class")" "$(maus_json_escape "$f")"
+  done
+done
+printf ']\n'
