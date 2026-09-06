@@ -23,7 +23,13 @@ export MAUSOS_PATH
 export MAUSOS_INSTALL="$MAUSOS_PATH/install"
 export MAUSOS_DATA="${MAUSOS_DATA:-$HOME/.local/share/mausos}"
 export MAUSOS_LOG="$MAUSOS_DATA/install.log"
-mkdir -p "$MAUSOS_DATA"
+mkdir -p "$MAUSOS_DATA" "$HOME/.local/bin"
+# Commands, pnpm and agent CLIs land here; Omarchy adds it at login, a bare
+# Arch shell may not have it yet.
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
 
 # shellcheck source=install/helpers.sh
 source "$MAUSOS_INSTALL/helpers.sh"

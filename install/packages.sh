@@ -44,11 +44,15 @@ fi
 
 if ! have pnpm; then
   info "installing pnpm"
-  if have corepack; then
-    corepack enable >/dev/null 2>&1 || true
-    corepack prepare pnpm@10 --activate >/dev/null 2>&1 || npm install -g pnpm@10
+  # Node 25+ no longer ships corepack and Arch's global npm prefix is
+  # root-owned, so install the major version OpenMausBot pins into the user's
+  # own prefix (~/.local/bin is on the installer's PATH). Fall back to the
+  # Arch package if npm cannot fetch it.
+  if npm install -g --prefix "$HOME/.local" pnpm@10 >/dev/null 2>&1; then
+    ok "pnpm $(pnpm --version 2>/dev/null) in ~/.local/bin"
   else
-    npm install -g pnpm@10
+    warn "npm could not install pnpm; using the Arch package"
+    pkg_add pnpm
   fi
 fi
 
