@@ -30,7 +30,17 @@ if ! have ollama; then
   pkg_add ollama
 fi
 if have systemctl && systemctl list-unit-files ollama.service >/dev/null 2>&1; then
+  # Ollama picks a 4k context on machines without VRAM; the maus tool
+  # catalogue alone needs more than that. 16k fits a 4B model in ~4 GB.
+  dropin=/etc/systemd/system/ollama.service.d/mausos.conf
+  if [[ ! -f $dropin ]]; then
+    sudo mkdir -p "$(dirname "$dropin")"
+    printf '[Service]\nEnvironment=OLLAMA_CONTEXT_LENGTH=16384\nEnvironment=OLLAMA_KEEP_ALIVE=30m\n' | sudo tee "$dropin" >/dev/null
+    sudo systemctl daemon-reload
+    ok "$dropin (16k context)"
+  fi
   sudo systemctl enable --now ollama.service >/dev/null 2>&1 || warn "could not start ollama.service"
+  sudo systemctl restart ollama.service >/dev/null 2>&1 || true
 fi
 if have ollama; then
   ok "ollama"
