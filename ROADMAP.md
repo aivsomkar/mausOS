@@ -20,7 +20,8 @@ accessibility tree, and reads the page back, with no screenshot.
 - [x] Registry v0: curated manifests for the first apps
 - [x] MausOS skill linked into agent skill directories
 - [x] OpenCode + Ollama as the default local engine
-- [ ] Verified on a real Omarchy machine (needs hardware; see docs/phase-0.md)
+- [x] Verified on real Arch Linux (WSL 2 + WSLg, 6 Sep 2026): installer, mausd, MCP, the AT-SPI loop on a GTK dialog, and an agent turn that filled and closed the dialog through `maus` tools with no screenshot (see docs/phase-0.md)
+- [ ] Verified on a real Omarchy machine with Hyprland (window commands, Super+A shell, interrupt chord)
 
 ## Phase 1 — The ladder and the registry (~3 months)
 

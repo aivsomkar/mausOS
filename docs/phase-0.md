@@ -18,11 +18,50 @@ accessibility tree, and reads the page back, with no screenshot.
 | Hyprland layer, systemd unit, desktop entry | `config/` | written |
 | CI (shellcheck, bash -n, py_compile, tests, catalogue) | `.github/workflows/ci.yml` | written |
 
-Everything in this repo was written on a Windows machine without a Hyprland
-session available. Bash syntax, the Node tests and the JSON manifests are
-verified. The AT-SPI tool, Hyprland integration, and the installer are
-**unverified on real hardware**. Expect small fixes on first run; the design
-is sound, the details may not be.
+## First real run (6 Sep 2026, Arch Linux under WSL 2 with WSLg)
+
+No Hyprland was available, so the window commands and the shell hotkey are
+still unverified. Everything else ran for real:
+
+| Verified | How |
+| --- | --- |
+| `boot.sh` → `install.sh` end to end on a fresh Arch | packages, a11y environment, 45 commands linked, Hyprland layer written, OpenMausBot cloned and built, `mausd` started as a user service, MCP registered, skill linked |
+| `mausd` answers, bots list, `maus doctor` | `/api/health`, `maus agent list`, `maus daemon status` |
+| `maus mcp` handshake and a tool call through `mausd`'s registry | `initialize` → `tools/list` (43 tools) → `tools/call maus_registry_list` |
+| **Rung 3 end to end on a real GTK app** | a zenity entry dialog: `maus app tree` read the widget tree, `maus app find` located the field and the OK button, `maus app set` typed into the field, `maus app press OK` closed the dialog and zenity printed the typed text. No screenshot. |
+| OpenCode + Ollama installed by the engines step; OpenCode connects to `maus mcp` | `opencode mcp list` shows `maus connected`; `mausd` lists `ollama/...` models under the `opencodeGo` instance |
+
+Fixed on the way (each is a commit): pnpm install on Arch with Node 26 (no
+corepack, root-owned global prefix); `~/.local/bin` on the installer PATH;
+`loginctl enable-linger` so `mausd` survives logout; a 16k context for
+Ollama (its CPU default of 4k cannot hold the tool catalogue); name
+resolution preferring interactive widgets over their labels ("OK" matched the
+button and the label inside it); silenced pygobject deprecation warnings that
+polluted JSON output; duplicate skill links; `MAUS_MCP_GROUPS` to hand small
+models a lean tool set.
+
+### Agent run: the exit test, passed
+
+A bot created over the `mausd` API on the OpenCode engine, given the task
+*"a dialog titled 'MausOS test dialog' is open; find its text field, set it
+to 'agent was here', press OK; never take a screenshot"*:
+
+| Model | Outcome |
+| --- | --- |
+| `opencode/big-pickle` (OpenCode's free hosted model) | **Passed in 20 s.** Tool calls, in order: `maus_app_find` → `maus_app_set` on the field's tree id → `maus_app_find` → `maus_app_press OK`. zenity received exactly `agent was here` and closed. No screenshot, no approval card. |
+| `ollama/qwen3:4b`, CPU only | Did not finish. 2.7 tokens/s and long "thinking"; OpenCode's provider times out after 5 minutes waiting for the first byte. |
+| `ollama/qwen2.5:3b`, CPU only, `MAUS_MCP_GROUPS=app` | Did not finish. The prompt `mausd` assembles is ~12.6k tokens (its own system prompt plus its built-in agents/browser/computer tool servers, not the nine `maus` tools) and CPU prefill runs at ~29 tokens/s: 7 minutes to the first byte, past the 5-minute timeout. The model itself calls `maus_app_press` correctly when asked directly through Ollama. |
+
+Conclusion: the whole chain works. Local-only operation on this class of
+hardware (no GPU, 7 GB) is blocked by prompt size × CPU prefill speed, not by
+MausOS. Phase 1's router should keep small local models for short prompts
+and trim `mausd`'s built-in tool servers per bot; a GPU or a hosted model
+removes the limit entirely.
+
+Also exercised for real: `maus term open/send/wait/read` over tmux, `maus file
+search` (name and content), `maus file trash` (which exposed that trash
+listing needs a gvfs fallback, now added), `maus registry for/show`, `maus
+agent list/send/stop`, `maus doctor`.
 
 ## Verify on a real machine
 

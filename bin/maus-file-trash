@@ -11,15 +11,44 @@ maus_help_if_asked "$@"
 [[ $# -ge 1 ]] || { maus_usage; exit 1; }
 maus_need gio
 
+# The trash:/// URI needs the gvfs daemon; without it (headless, WSL, minimal
+# desktops) read the XDG trash directory directly. Same data either way.
+trash_dir="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
+
+trash_list() {
+  if gio list -a trash::orig-path trash:/// >/dev/null 2>&1; then
+    gio list -a standard::display-name,trash::orig-path trash:/// 2>/dev/null | sed 's/^/trash: /'
+    return
+  fi
+  local info
+  for info in "$trash_dir"/info/*.trashinfo; do
+    [[ -f $info ]] || continue
+    printf 'trash: %s\t%s\n' "$(basename "${info%.trashinfo}")" "$(sed -n 's/^Path=//p' "$info" | head -1)"
+  done
+}
+
+trash_restore() {
+  local name=$1 orig
+  if orig=$(gio info "trash:///$name" 2>/dev/null | sed -n 's/^ *trash::orig-path: //p') && [[ -n $orig ]]; then
+    gio move "trash:///$name" "$orig"
+  else
+    local info="$trash_dir/info/$name.trashinfo"
+    [[ -f $info && -e "$trash_dir/files/$name" ]] || maus_die "no '$name' in trash (maus file trash --list)"
+    orig=$(sed -n 's/^Path=//p' "$info" | head -1)
+    orig=$(printf '%b' "${orig//%/\\x}")   # trashinfo paths are URL-encoded
+    [[ $orig == /* ]] || orig="$HOME/$orig"
+    mkdir -p "$(dirname "$orig")"
+    mv "$trash_dir/files/$name" "$orig" && rm -f "$info"
+  fi
+  maus_log "restore $orig"
+  echo "restored $orig"
+}
+
 case "$1" in
-  --list) gio list -a standard::display-name,trash::orig-path trash:/// 2>/dev/null | sed 's/^/trash: /' ;;
+  --list) trash_list ;;
   --restore)
     [[ -n ${2:-} ]] || maus_die "--restore needs a name"
-    orig=$(gio info "trash:///$2" 2>/dev/null | sed -n 's/^ *trash::orig-path: //p')
-    [[ -n $orig ]] || maus_die "no '$2' in trash"
-    gio move "trash:///$2" "$orig"
-    maus_log "restore $orig"
-    echo "restored $orig"
+    trash_restore "$2"
     ;;
   *)
     for f in "$@"; do
