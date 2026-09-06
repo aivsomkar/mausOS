@@ -26,6 +26,11 @@ Requires python-gobject and at-spi2-core (installed by install/packages.sh).
 import json
 import re
 import sys
+import warnings
+
+# libatspi renames methods between releases and pygobject flags the old names;
+# the calls still work and stdout must stay clean JSON for callers.
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 try:
     import gi
