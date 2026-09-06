@@ -314,7 +314,44 @@ def find_nodes(app, query, role=None, include_hidden=False, max_nodes=DEFAULT_MA
     return exact, ci, sub
 
 
-def resolve_target(app, target, role=None, include_hidden=False):
+DECORATIVE_ROLES = {"label", "static", "panel", "filler", "section", "image", "icon", "separator"}
+REAL_ACTIONS = {"click", "press", "activate", "toggle", "jump", "select", "expand", "collapse", "edit", "open"}
+
+
+def interactive_score(acc, intent):
+    """Higher is better. Buttons beat the labels inside them; entries beat captions."""
+    role = safe(acc.get_role_name, "") or ""
+    ss = safe(acc.get_state_set)
+    has = lambda name: bool(ss and safe(lambda: ss.contains(getattr(Atspi.StateType, name)), False))  # noqa: E731
+    actions = {a.lower() for a in actions_of(acc)}
+    score = 0
+    if role not in DECORATIVE_ROLES:
+        score += 4
+    if actions & REAL_ACTIONS:
+        score += 3
+    if has("FOCUSABLE"):
+        score += 1
+    if intent == "set":
+        if has("EDITABLE") or safe(acc.get_value_iface) is not None:
+            score += 6
+    elif intent == "press":
+        if actions & REAL_ACTIONS:
+            score += 3
+    elif intent == "focus":
+        if has("FOCUSABLE"):
+            score += 3
+    return score
+
+
+def disambiguate(bucket, intent):
+    """Keep the best-scoring candidates; a single winner resolves the target."""
+    scored = sorted(((interactive_score(a, intent), a, p) for a, p in bucket), key=lambda t: -t[0])
+    best = scored[0][0]
+    winners = [(a, p) for s, a, p in scored if s == best]
+    return winners
+
+
+def resolve_target(app, target, role=None, include_hidden=False, intent=None):
     if PATH_RE.match(target):
         return resolve_path(app, target), target
     exact, ci, sub = find_nodes(app, target, role, include_hidden)
@@ -322,7 +359,10 @@ def resolve_target(app, target, role=None, include_hidden=False):
         if len(bucket) == 1:
             return bucket[0]
         if len(bucket) > 1:
-            cands = ", ".join(f"{p} {safe(a.get_role_name, '')} '{safe(a.get_name, '')}'" for a, p in bucket[:12])
+            winners = disambiguate(bucket, intent)
+            if len(winners) == 1:
+                return winners[0]
+            cands = ", ".join(f"{p} {safe(a.get_role_name, '')} '{safe(a.get_name, '')}'" for a, p in winners[:12])
             fail(f"'{target}' matches several widgets: {cands}. Use a path id.")
     fail(f"no widget named '{target}' in {safe(app.get_name, '')}. Try: atspi.py find <app> <part-of-name>")
     return None, None
@@ -396,7 +436,7 @@ def cmd_press(args):
     if len(rest) < 2:
         fail("usage: press <app> <target> [--action NAME]")
     app = find_app(rest[0])
-    acc, path = resolve_target(app, rest[1], include_hidden=flags.get("all", False))
+    acc, path = resolve_target(app, rest[1], include_hidden=flags.get("all", False), intent="press")
     action = safe(acc.get_action_iface)
     if action is None:
         fail(f"{path} ({safe(acc.get_role_name, '')} '{safe(acc.get_name, '')}') has no actions; try focus + maus win input")
@@ -413,7 +453,7 @@ def cmd_set(args):
     if len(rest) < 3:
         fail("usage: set <app> <target> <value>")
     app = find_app(rest[0])
-    acc, path = resolve_target(app, rest[1], include_hidden=flags.get("all", False))
+    acc, path = resolve_target(app, rest[1], include_hidden=flags.get("all", False), intent="set")
     value = " ".join(rest[2:])
     editable = safe(acc.get_editable_text_iface)
     if editable is not None:
@@ -437,7 +477,7 @@ def cmd_focus(args):
     if len(rest) < 2:
         fail("usage: focus <app> <target>")
     app = find_app(rest[0])
-    acc, path = resolve_target(app, rest[1], include_hidden=flags.get("all", False))
+    acc, path = resolve_target(app, rest[1], include_hidden=flags.get("all", False), intent="focus")
     comp = safe(acc.get_component_iface)
     if comp is None:
         fail(f"{path} cannot take focus")
