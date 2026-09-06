@@ -71,3 +71,16 @@ test("arguments are always passed as strings", async () => {
   await server.handle({ jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "maus_hw_volume", arguments: { args: ["set", 40] } } });
   assert.deepEqual(calls.at(-1).args, ["set", "40"]);
 });
+
+test("MAUS_MCP_GROUPS narrows the catalogue for small models", async () => {
+  const lean = createServer({ binDir: BIN, runner: fakeRunner([]), groups: "app,term" });
+  const names = lean.tools.map((t) => t.name);
+  assert.ok(names.includes("maus_app_press"));
+  assert.ok(names.includes("maus_term_send"));
+  assert.ok(!names.includes("maus_pkg_add"));
+  assert.ok(!names.includes("maus_see_shot"));
+  const noVision = createServer({ binDir: BIN, runner: fakeRunner([]), exclude: "see,pkg" });
+  const n2 = noVision.tools.map((t) => t.name);
+  assert.ok(n2.includes("maus_pkg_search") === false);
+  assert.ok(n2.includes("maus_app_press"));
+});

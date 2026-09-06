@@ -48,8 +48,21 @@ export function defaultRunner(file, args, { timeoutMs, env }) {
   });
 }
 
-export function createServer({ binDir, runner = defaultRunner, timeoutMs = 120_000, log = () => {} } = {}) {
-  const catalogue = loadCatalogue(binDir);
+/**
+ * Narrow the catalogue for small models. MAUS_MCP_GROUPS="app,win,term" keeps
+ * only those groups; MAUS_MCP_EXCLUDE="see,pkg" drops groups. Both optional.
+ */
+export function filterCatalogue(catalogue, { groups, exclude } = {}) {
+  const keep = groups ? new Set(groups.split(",").map((s) => s.trim()).filter(Boolean)) : null;
+  const drop = exclude ? new Set(exclude.split(",").map((s) => s.trim()).filter(Boolean)) : new Set();
+  return catalogue.filter((e) => (keep ? keep.has(e.group) : true) && !drop.has(e.group));
+}
+
+export function createServer({ binDir, runner = defaultRunner, timeoutMs = 120_000, log = () => {}, groups, exclude } = {}) {
+  const catalogue = filterCatalogue(loadCatalogue(binDir), {
+    groups: groups ?? process.env.MAUS_MCP_GROUPS,
+    exclude: exclude ?? process.env.MAUS_MCP_EXCLUDE,
+  });
   const byTool = new Map(catalogue.map((e) => [toolName(e), e]));
   const tools = catalogue.map(toolFromEntry);
 
