@@ -45,6 +45,11 @@ sed \
 ok "$unitdir/mausd.service"
 
 if have systemctl; then
+  # Keep the user manager (and mausd, its routines and bots) alive with no
+  # session open: after logout, over SSH, and under WSL where sessions are short.
+  if have loginctl; then
+    loginctl enable-linger "$USER" 2>/dev/null && ok "linger enabled for $USER" || warn "could not enable linger (mausd stops at logout)"
+  fi
   systemctl --user daemon-reload
   systemctl --user enable --now mausd.service >/dev/null 2>&1 || systemctl --user restart mausd.service
   if wait_for_mausd 60; then
