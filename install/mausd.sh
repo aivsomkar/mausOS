@@ -27,6 +27,8 @@ else
   info "building OpenMausBot (this takes a few minutes the first time)"
   (
     cd "$checkout" || exit 1
+    # Only the server and the web UI are built; the Electron shell is not.
+    export ELECTRON_SKIP_BINARY_DOWNLOAD=1
     pnpm install --frozen-lockfile
     pnpm build
     pnpm build:server
